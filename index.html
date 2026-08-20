@@ -88,7 +88,7 @@
   // Paste your Firebase config below (from the Firebase console: Project settings > your web app).
   // Leave firebaseConfig as null until you have it — sync will just be disabled until then.
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAl7kbd8C9NNjBBYkQjz8rn8suldsOfDNg",
@@ -110,6 +110,7 @@
   window.__firestoreDoc = doc;
   window.__firestoreSetDoc = setDoc;
   window.__firestoreGetDoc = getDoc;
+  window.__firestoreOnSnapshot = onSnapshot;
   window.__firestoreDb = db;
 </script>
 </head>
@@ -146,7 +147,28 @@ function uid() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
-const PALETTE = ["#7C86D6", "#C97B63", "#5FAE8C", "#CB8A4F", "#B96C93", "#6FA5C4", "#9C8555", "#8B7FC7", "#6BA888", "#C67A7A"];
+const PALETTE = [
+  "#7C86D6", // periwinkle
+  "#C97B63", // terracotta
+  "#5FAE8C", // sage green
+  "#CB8A4F", // ochre
+  "#B96C93", // mauve
+  "#6FA5C4", // steel blue
+  "#9C8555", // bronze
+  "#8B7FC7", // violet
+  "#6BA888", // moss
+  "#C67A7A", // dusty rose
+  "#4F9DA6", // teal
+  "#C25B5B", // brick red
+  "#D4A94F", // gold
+  "#5B7FBF", // cobalt
+  "#A868B0", // orchid
+  "#7CAE5F", // olive green
+  "#D4884F", // amber
+  "#6F7BA6", // slate blue
+  "#B0637C", // raspberry
+  "#5FA6A0", // seafoam
+];
 
 const CATEGORIES = [
   { key: "class", label: "Class", icon: "book" },
@@ -183,10 +205,10 @@ function isFirebaseReady() {
   return typeof window !== "undefined" && window.__firebaseReady;
 }
 
-async function pushToCloud(code, data) {
+async function pushToCloud(code, data, stamp) {
   if (!isFirebaseReady()) throw new Error("Sync isn't set up yet.");
   const ref = window.__firestoreDoc(window.__firestoreDb, "syncedData", code);
-  await window.__firestoreSetDoc(ref, { ...data, updatedAt: Date.now() });
+  await window.__firestoreSetDoc(ref, { ...data, updatedAt: stamp || Date.now() });
 }
 
 async function pullFromCloud(code) {
@@ -195,6 +217,17 @@ async function pullFromCloud(code) {
   const snap = await window.__firestoreGetDoc(ref);
   if (!snap.exists()) return null;
   return snap.data();
+}
+
+// Subscribes to real-time updates for a sync code. Calls onData(data) every time
+// the cloud copy changes (from any device), including once immediately with the
+// current value. Returns an unsubscribe function.
+function subscribeToCloud(code, onData) {
+  if (!isFirebaseReady()) return () => {};
+  const ref = window.__firestoreDoc(window.__firestoreDb, "syncedData", code);
+  return window.__firestoreOnSnapshot(ref, (snap) => {
+    if (snap.exists()) onData(snap.data());
+  }, () => {});
 }
 
 /* ---------- icons ---------- */
@@ -305,6 +338,19 @@ function formatDueLabel(iso) {
 function isOverdue(iso) {
   if (!iso) return false;
   return iso < todayISO();
+}
+
+/* ---------- responsive helper ---------- */
+
+function useIsMobile(breakpoint) {
+  const bp = breakpoint || 640;
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < bp);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < bp);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, [bp]);
+  return isMobile;
 }
 
 /* ---------- reusable mini calendar popover for picking a date ---------- */
@@ -1429,6 +1475,7 @@ function CalendarScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
 /* ---------- month view grid ---------- */
 
 function MonthGrid({ year, month, today, selectedDate, setSelectedDate, tasksByDate, classById, weekdayLabels }) {
+  const isMobile = useIsMobile(640);
   const firstOfMonth = new Date(year, month, 1);
   const startWeekday = firstOfMonth.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -1436,6 +1483,70 @@ function MonthGrid({ year, month, today, selectedDate, setSelectedDate, tasksByD
   const cells = [];
   for (let i = 0; i < startWeekday; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  if (isMobile) {
+    return (
+      <div style={{
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: "var(--radius-card)", padding: "16px 10px", boxShadow: "var(--shadow)",
+      }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+          {weekdayLabels.map((w, i) => (
+            <div key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", padding: "2px 0" }}>
+              {w}
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+          {cells.map((d, i) => {
+            if (d === null) return <div key={i} />;
+            const iso = isoFromDate(new Date(year, month, d));
+            const dayTasks = tasksByDate[iso] || [];
+            const isToday = iso === today;
+            const isSelected = iso === selectedDate;
+            const overdueCount = dayTasks.filter(t => isOverdue(t.dueDate)).length;
+            const dotColors = [...new Set(dayTasks.slice(0, 4).map(t => {
+              if (isOverdue(t.dueDate)) return "#C15B5B";
+              const c = classById[t.classId];
+              return c ? c.color : "var(--text-muted)";
+            }))].slice(0, 4);
+            return (
+              <button
+                key={i}
+                onClick={() => setSelectedDate(iso)}
+                style={{
+                  aspectRatio: "1", display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center", gap: 3,
+                  borderRadius: 10, border: "none", cursor: "pointer",
+                  background: isSelected ? "var(--text-primary)" : (isToday ? "var(--bg)" : "transparent"),
+                  transition: "background 0.15s ease",
+                }}
+              >
+                <span style={{
+                  fontSize: 13.5, fontWeight: isToday ? 700 : 500,
+                  color: isSelected ? "var(--bg)" : (isToday ? "var(--text-primary)" : "var(--text-primary)"),
+                }}>
+                  {d}
+                </span>
+                {dotColors.length > 0 && (
+                  <div style={{ display: "flex", gap: 2.5, height: 5 }}>
+                    {dotColors.map((color, idx) => (
+                      <span key={idx} style={{
+                        width: 5, height: 5, borderRadius: "50%",
+                        background: isSelected ? "var(--bg)" : color,
+                        opacity: isSelected ? 0.85 : 1,
+                      }} />
+                    ))}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -1942,31 +2053,51 @@ function App() {
     try { return localStorage.getItem(SYNC_CODE_KEY) || null; } catch (e) { return null; }
   });
   const [syncStatus, setSyncStatus] = useState(null);
-  const skipNextPush = useRef(false);
+  const lastPushedAt = useRef(0);
+  const suppressNextRemoteApply = useRef(false);
 
   useEffect(() => {
     saveState({ classes, tasks, theme });
   }, [classes, tasks, theme]);
 
-  // Push to cloud whenever data changes, if synced
+  // Push to cloud shortly after data changes, if synced
   useEffect(() => {
     if (!syncCode || !isFirebaseReady()) return;
-    if (skipNextPush.current) { skipNextPush.current = false; return; }
+    if (suppressNextRemoteApply.current) { suppressNextRemoteApply.current = false; return; }
     setSyncStatus("saving");
     const t = setTimeout(() => {
-      pushToCloud(syncCode, { classes, tasks })
+      const stamp = Date.now();
+      lastPushedAt.current = stamp;
+      pushToCloud(syncCode, { classes, tasks }, stamp)
         .then(() => setSyncStatus("saved"))
         .catch(() => setSyncStatus("error"));
-    }, 600);
+    }, 500);
     return () => clearTimeout(t);
   }, [classes, tasks, syncCode]);
+
+  // Stay live-connected to the cloud copy while synced, so changes made on
+  // another device show up here within about a second — no refresh needed.
+  useEffect(() => {
+    if (!syncCode || !isFirebaseReady()) return;
+    const unsubscribe = subscribeToCloud(syncCode, (data) => {
+      // Ignore snapshots that are just an echo of our own most recent push
+      if (data.updatedAt && data.updatedAt <= lastPushedAt.current) return;
+      suppressNextRemoteApply.current = true;
+      setClasses(data.classes || []);
+      setTasks(data.tasks || []);
+      setSyncStatus("saved");
+    });
+    return unsubscribe;
+  }, [syncCode]);
 
   const createSync = useCallback(() => {
     const code = generateSyncCode();
     setSyncCode(code);
     try { localStorage.setItem(SYNC_CODE_KEY, code); } catch (e) {}
     setSyncStatus("saving");
-    pushToCloud(code, { classes, tasks })
+    const stamp = Date.now();
+    lastPushedAt.current = stamp;
+    pushToCloud(code, { classes, tasks }, stamp)
       .then(() => setSyncStatus("saved"))
       .catch(() => setSyncStatus("error"));
   }, [classes, tasks]);
@@ -1977,7 +2108,8 @@ function App() {
     pullFromCloud(code)
       .then(data => {
         if (data) {
-          skipNextPush.current = true;
+          suppressNextRemoteApply.current = true;
+          lastPushedAt.current = data.updatedAt || Date.now();
           setClasses(data.classes || []);
           setTasks(data.tasks || []);
         }
@@ -1992,22 +2124,6 @@ function App() {
     setSyncCode(null);
     setSyncStatus(null);
     try { localStorage.removeItem(SYNC_CODE_KEY); } catch (e) {}
-  }, []);
-
-  // On load, if this device already has a sync code, pull the latest cloud data once
-  useEffect(() => {
-    if (syncCode && isFirebaseReady()) {
-      pullFromCloud(syncCode)
-        .then(data => {
-          if (data) {
-            skipNextPush.current = true;
-            setClasses(data.classes || []);
-            setTasks(data.tasks || []);
-          }
-        })
-        .catch(() => {});
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
