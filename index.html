@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <link rel="icon" type="image/png" href="./school-organizer-icon.png">
 <link rel="apple-touch-icon" href="./school-organizer-icon.png">
- <title>Classes</title>
+<title>Classes</title>
 
 <!-- PWA / home screen icon setup -->
 <link rel="manifest" href="manifest.json" />
@@ -52,6 +52,7 @@
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
+  #app-shell { min-height: 100vh; min-height: 100dvh; }
   body {
     margin: 0;
     background: var(--bg);
@@ -2116,7 +2117,7 @@ function App() {
   }
 
   return (
-    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
+    <div id="app-shell" style={{ display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1 }}>{content}</div>
       <NavBar tab={openClass ? "classes" : tab} setTab={(t) => { setOpenClassId(null); setTab(t); }} allCount={allActiveCount} />
       <FloatingAdd classes={classes} activeClassId={openClass ? openClass.id : null} onAdd={addTask} />
