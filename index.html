@@ -112,6 +112,11 @@
   window.__firestoreGetDoc = getDoc;
   window.__firestoreOnSnapshot = onSnapshot;
   window.__firestoreDb = db;
+  // Let the React app (which loads separately via Babel) know Firebase is
+  // ready even if this module script finishes after React has already
+  // rendered once — without this, a slow connection could make the app
+  // permanently think sync is unavailable.
+  window.dispatchEvent(new CustomEvent("firebase-ready"));
 </script>
 </head>
 <body>
@@ -147,28 +152,60 @@ function uid() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
-const PALETTE = [
-  "#7C86D6", // periwinkle
-  "#C97B63", // terracotta
-  "#5FAE8C", // sage green
-  "#CB8A4F", // ochre
-  "#B96C93", // mauve
-  "#6FA5C4", // steel blue
-  "#9C8555", // bronze
-  "#8B7FC7", // violet
-  "#6BA888", // moss
-  "#C67A7A", // dusty rose
-  "#4F9DA6", // teal
-  "#C25B5B", // brick red
-  "#D4A94F", // gold
-  "#5B7FBF", // cobalt
-  "#A868B0", // orchid
-  "#7CAE5F", // olive green
-  "#D4884F", // amber
-  "#6F7BA6", // slate blue
-  "#B0637C", // raspberry
-  "#5FA6A0", // seafoam
+const COLOR_PACKS = [
+  {
+    key: "muted",
+    label: "Muted",
+    colors: [
+      "#7C86D6", "#C97B63", "#5FAE8C", "#CB8A4F", "#B96C93",
+      "#6FA5C4", "#9C8555", "#8B7FC7", "#6BA888", "#C67A7A",
+      "#4F9DA6", "#C25B5B", "#D4A94F", "#5B7FBF", "#A868B0",
+      "#7CAE5F", "#D4884F", "#6F7BA6", "#B0637C", "#5FA6A0",
+    ],
+  },
+  {
+    key: "pastel",
+    label: "Pastel",
+    colors: [
+      "#B8C4F0", "#F5C6B8", "#B8E6D0", "#F5D9A8", "#EAC0DC",
+      "#B8DCEE", "#E8D4B8", "#CFC3F2", "#C6E8C6", "#F2C6C6",
+      "#B0E0DC", "#F0B8B8", "#F5E0A8", "#C0C8F0", "#E0BCE8",
+      "#D0E8B8", "#F2CFA8", "#C6D0F0", "#EAC0D0", "#B8E8DC",
+    ],
+  },
+  {
+    key: "vibrant",
+    label: "Vibrant",
+    colors: [
+      "#5B6EE8", "#E85D3C", "#2FB878", "#E8A020", "#D6408F",
+      "#1FA3D6", "#B87A20", "#8952E0", "#2FA858", "#E04545",
+      "#14A8A0", "#D62828", "#F0B818", "#3660D6", "#B840C8",
+      "#5FB828", "#E87818", "#4058B8", "#D6407C", "#18B8A8",
+    ],
+  },
+  {
+    key: "deep",
+    label: "Deep",
+    colors: [
+      "#3B4590", "#8B3D26", "#2D6B4F", "#8A5A1E", "#7A3556",
+      "#2C5F78", "#5C4620", "#4A3A80", "#2E6B44", "#7A2E2E",
+      "#1E6560", "#7A1F1F", "#8A6E1A", "#26408A", "#6A2E78",
+      "#3E6E22", "#8A4E14", "#283C7A", "#7A2650", "#1F7268",
+    ],
+  },
+  {
+    key: "neutrals",
+    label: "Neutrals",
+    colors: [
+      "#FFFFFF", "#F2F1ED", "#E5E3DD", "#D8D5CD", "#CBC7BD",
+      "#BEB9AD", "#B0AB9D", "#9C978A", "#8A8578", "#787468",
+      "#666258", "#565248", "#464339", "#38352C", "#2A2721",
+      "#1E1C17", "#141310", "#0A0908", "#000000", "#71717A",
+    ],
+  },
 ];
+
+const PALETTE = COLOR_PACKS[0].colors; // default pack, used for auto-assigning new class colors
 
 const CATEGORIES = [
   { key: "class", label: "Class", icon: "book" },
@@ -256,6 +293,8 @@ function Icon({ name, size = 20, style }) {
     trophy: <><path d="M8 21h8M12 17v4" /><path d="M7 4h10v5a5 5 0 01-10 0V4z" /><path d="M7 5H4a2 2 0 002 4M17 5h3a2 2 0 01-2 4" /></>,
     star: <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />,
     alertTriangle: <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>,
+    search: <><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>,
+    flame: <path d="M8.5 14.5A2.5 2.5 0 0011 17a2.5 2.5 0 002.5-2.5c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7.5 7.5 0 11-15 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z" />,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
@@ -340,6 +379,58 @@ function isOverdue(iso) {
   return iso < todayISO();
 }
 
+/* ---------- streak calculation ---------- */
+
+function computeStreak(tasks) {
+  // A day "passes" if every task due that day was completed on or before that day.
+  // A day with nothing due also passes (there was nothing to miss).
+  const dayPasses = (iso) => {
+    const dueThatDay = tasks.filter(t => t.dueDate === iso);
+    if (dueThatDay.length === 0) return true;
+    return dueThatDay.every(t => {
+      if (!t.done || !t.completedAt) return false;
+      const completedIso = isoFromDate(new Date(t.completedAt));
+      return completedIso <= iso;
+    });
+  };
+
+  // Earliest date any task was ever due or completed — we never count a
+  // streak further back than this, so an empty history doesn't look infinite.
+  const allDates = [];
+  tasks.forEach(t => {
+    if (t.dueDate) allDates.push(t.dueDate);
+    if (t.completedAt) allDates.push(isoFromDate(new Date(t.completedAt)));
+  });
+  if (allDates.length === 0) return 0;
+  const earliestDate = allDates.reduce((min, d) => (d < min ? d : min));
+
+  const today = todayISO();
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = isoFromDate(yesterdayDate);
+
+  // Today doesn't have to be finished yet to keep the streak alive — it just
+  // can't already have missed, still-incomplete tasks due today. We start
+  // counting from today if today currently passes, otherwise from yesterday,
+  // so an in-progress day doesn't break a streak prematurely.
+  const startDay = dayPasses(today) ? today : yesterday;
+
+  // If neither today nor yesterday passes, the streak is broken.
+  if (!dayPasses(startDay)) return 0;
+
+  let streak = 0;
+  let cursor = dateFromISO(startDay);
+  while (true) {
+    const iso = isoFromDate(cursor);
+    if (iso < earliestDate) break;
+    if (!dayPasses(iso)) break;
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+    if (streak > 3650) break; // sanity cap
+  }
+  return streak;
+}
+
 /* ---------- responsive helper ---------- */
 
 function useIsMobile(breakpoint) {
@@ -365,7 +456,11 @@ function MiniCalendarPopover({ value, onSelect, onClose, anchorRect }) {
       if (popRef.current && !popRef.current.contains(e.target)) onClose();
     };
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("touchstart", handleClick, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("touchstart", handleClick);
+    };
   }, [onClose]);
 
   const { year, month } = cursor;
@@ -495,76 +590,189 @@ function DatePickerButton({ value, onChange }) {
   );
 }
 
+const SWIPE_THRESHOLD = 72;
+
+function vibrate(pattern) {
+  try {
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(pattern);
+  } catch (e) {}
+}
+
 function TaskRow({ task, color, onToggle, onDelete }) {
   const [leaving, setLeaving] = useState(false);
   const [height, setHeight] = useState(null);
   const ref = useRef(null);
+  const toggling = useRef(false);
+
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const axisLocked = useRef(null); // 'x' | 'y' | null
+  const firedHaptic = useRef(false);
 
   const handleToggle = () => {
     if (!task.done) {
+      if (toggling.current) return;
+      toggling.current = true;
       setLeaving(true);
+      vibrate(12);
       if (ref.current) setHeight(ref.current.offsetHeight);
-      setTimeout(() => onToggle(task.id), 320);
+      setTimeout(() => { onToggle(task.id); toggling.current = false; }, 320);
     } else {
       onToggle(task.id);
     }
   };
 
+  const handleDeleteSwipe = () => {
+    vibrate([10, 30, 10]);
+    if (ref.current) setHeight(ref.current.offsetHeight);
+    setLeaving(true);
+    setTimeout(() => onDelete(task.id), 260);
+  };
+
+  const onTouchStart = (e) => {
+    if (leaving) return;
+    startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
+    axisLocked.current = null;
+    firedHaptic.current = false;
+    setDragging(true);
+  };
+
+  const onTouchMove = (e) => {
+    if (!dragging || leaving) return;
+    const dx = e.touches[0].clientX - startX.current;
+    const dy = e.touches[0].clientY - startY.current;
+
+    if (axisLocked.current === null) {
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+        axisLocked.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      }
+    }
+    if (axisLocked.current === "y") return; // let the page scroll normally
+    if (axisLocked.current === "x") {
+      // resist a little past the threshold so it doesn't feel infinite
+      const resisted = dx > 0
+        ? Math.min(dx, SWIPE_THRESHOLD * 1.6)
+        : Math.max(dx, -SWIPE_THRESHOLD * 1.6);
+      setDragX(resisted);
+      const pastThreshold = Math.abs(resisted) >= SWIPE_THRESHOLD;
+      if (pastThreshold && !firedHaptic.current) {
+        vibrate(8);
+        firedHaptic.current = true;
+      } else if (!pastThreshold) {
+        firedHaptic.current = false;
+      }
+    }
+  };
+
+  const onTouchEnd = () => {
+    if (!dragging) return;
+    setDragging(false);
+    if (axisLocked.current === "x") {
+      if (dragX >= SWIPE_THRESHOLD && !task.done) {
+        handleToggle();
+      } else if (dragX <= -SWIPE_THRESHOLD) {
+        handleDeleteSwipe();
+      }
+    }
+    setDragX(0);
+    axisLocked.current = null;
+  };
+
   const overdue = !task.done && isOverdue(task.dueDate);
   const dueLabel = formatDueLabel(task.dueDate);
 
+  const swipeProgress = Math.max(-1, Math.min(1, dragX / SWIPE_THRESHOLD));
+
   return (
-    <div
-      ref={ref}
-      style={{
-        display: "flex", alignItems: "center", gap: 12,
-        padding: "13px 4px",
-        borderBottom: "1px solid var(--border)",
-        opacity: leaving ? 0 : 1,
-        transform: leaving ? "translateX(24px) scale(0.98)" : "translateX(0) scale(1)",
-        maxHeight: leaving ? 0 : (height ? height + 40 : 80),
-        paddingTop: leaving ? 0 : 13,
-        paddingBottom: leaving ? 0 : 13,
-        overflow: "hidden",
-        transition: "opacity 0.28s ease, transform 0.28s cubic-bezier(0.4,0,0.2,1), max-height 0.32s cubic-bezier(0.4,0,0.2,1) 0.02s, padding 0.32s ease",
-      }}
-    >
-      <TaskCheckbox checked={task.done} onToggle={handleToggle} color={color} />
-      <span style={{
-        flex: 1, fontSize: 15.5, lineHeight: 1.4,
-        color: task.done ? "var(--text-muted)" : "var(--text-primary)",
-        textDecoration: task.done ? "line-through" : "none",
-        transition: "color 0.2s ease",
-        wordBreak: "break-word",
-      }}>
-        {task.title}
-      </span>
-      {dueLabel && !task.done && (
-        <span style={{
-          fontSize: 12, fontWeight: 600, flexShrink: 0,
-          padding: "3px 8px", borderRadius: 8,
-          color: overdue ? "#C15B5B" : "var(--text-secondary)",
-          background: overdue ? "#C15B5B18" : "var(--bg)",
-          border: overdue ? "none" : "1px solid var(--border)",
-          whiteSpace: "nowrap",
+    <div style={{ position: "relative", overflow: "hidden" }}>
+      {dragX !== 0 && (
+        <div style={{
+          position: "absolute", inset: 0,
+          display: "flex", alignItems: "center",
+          justifyContent: swipeProgress > 0 ? "flex-start" : "flex-end",
+          padding: "0 18px",
+          background: swipeProgress > 0
+            ? `rgba(95,174,140,${0.12 + Math.abs(swipeProgress) * 0.18})`
+            : `rgba(193,91,91,${0.12 + Math.abs(swipeProgress) * 0.18})`,
+          borderRadius: 10,
         }}>
-          {dueLabel}
-        </span>
+          <Icon
+            name={swipeProgress > 0 ? "check" : "trash"}
+            size={18}
+            style={{
+              color: swipeProgress > 0 ? "#5FAE8C" : "#C15B5B",
+              opacity: Math.min(1, Math.abs(swipeProgress) * 1.3),
+              transform: `scale(${0.7 + Math.min(1, Math.abs(swipeProgress)) * 0.4})`,
+              transition: "transform 0.1s ease",
+            }}
+          />
+        </div>
       )}
-      <button
-        onClick={() => onDelete(task.id)}
-        aria-label="Delete task"
+      <div
+        ref={ref}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={() => { setDragging(false); setDragX(0); axisLocked.current = null; }}
         style={{
-          background: "none", border: "none", cursor: "pointer",
-          color: "var(--text-muted)", padding: 6, borderRadius: 8,
-          display: "flex", opacity: 0.6, transition: "opacity 0.15s ease",
-          flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "13px 4px",
+          borderBottom: "1px solid var(--border)",
+          background: "var(--surface)",
+          opacity: leaving ? 0 : 1,
+          transform: leaving
+            ? "translateX(24px) scale(0.98)"
+            : `translateX(${dragX}px)`,
+          maxHeight: leaving ? 0 : (height ? height + 40 : 80),
+          paddingTop: leaving ? 0 : 13,
+          paddingBottom: leaving ? 0 : 13,
+          overflow: "hidden",
+          transition: dragging
+            ? "none"
+            : "opacity 0.28s ease, transform 0.28s cubic-bezier(0.4,0,0.2,1), max-height 0.32s cubic-bezier(0.4,0,0.2,1) 0.02s, padding 0.32s ease",
+          touchAction: "pan-y",
         }}
-        onMouseEnter={e => e.currentTarget.style.opacity = 1}
-        onMouseLeave={e => e.currentTarget.style.opacity = 0.6}
       >
-        <Icon name="x" size={15} />
-      </button>
+        <TaskCheckbox checked={task.done} onToggle={handleToggle} color={color} />
+        <span style={{
+          flex: 1, fontSize: 15.5, lineHeight: 1.4,
+          color: task.done ? "var(--text-muted)" : "var(--text-primary)",
+          textDecoration: task.done ? "line-through" : "none",
+          transition: "color 0.2s ease",
+          wordBreak: "break-word",
+        }}>
+          {task.title}
+        </span>
+        {dueLabel && !task.done && (
+          <span style={{
+            fontSize: 12, fontWeight: 600, flexShrink: 0,
+            padding: "3px 8px", borderRadius: 8,
+            color: overdue ? "#C15B5B" : "var(--text-secondary)",
+            background: overdue ? "#C15B5B18" : "var(--bg)",
+            border: overdue ? "none" : "1px solid var(--border)",
+            whiteSpace: "nowrap",
+          }}>
+            {dueLabel}
+          </span>
+        )}
+        <button
+          onClick={() => onDelete(task.id)}
+          aria-label="Delete task"
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            color: "var(--text-muted)", padding: 6, borderRadius: 8,
+            display: "flex", opacity: 0.6, transition: "opacity 0.15s ease",
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = 1}
+          onMouseLeave={e => e.currentTarget.style.opacity = 0.6}
+        >
+          <Icon name="x" size={15} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -777,6 +985,63 @@ function ClassCard({
 
 /* ---------- class detail screen ---------- */
 
+/* ---------- color pack picker ---------- */
+
+function findPackForColor(color) {
+  for (const pack of COLOR_PACKS) {
+    if (pack.colors.includes(color)) return pack.key;
+  }
+  return COLOR_PACKS[0].key;
+}
+
+function isLightColor(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  // perceived brightness
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 235;
+}
+
+function ColorPackPicker({ selectedColor, onSelect }) {
+  const [activePack, setActivePack] = useState(() => findPackForColor(selectedColor));
+  const pack = COLOR_PACKS.find(p => p.key === activePack) || COLOR_PACKS[0];
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 4, marginBottom: 12, background: "var(--bg)", borderRadius: 10, padding: 3 }}>
+        {COLOR_PACKS.map(p => (
+          <button key={p.key} onClick={() => setActivePack(p.key)} style={{
+            flex: 1, padding: "7px 6px", borderRadius: 7, border: "none", cursor: "pointer",
+            background: activePack === p.key ? "var(--surface)" : "transparent",
+            color: activePack === p.key ? "var(--text-primary)" : "var(--text-secondary)",
+            fontWeight: activePack === p.key ? 700 : 500, fontSize: 12,
+            boxShadow: activePack === p.key ? "var(--shadow)" : "none",
+            transition: "all 0.15s ease",
+          }}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {pack.colors.map(c => {
+          const isVeryLight = isLightColor(c);
+          return (
+            <button key={c} onClick={() => onSelect(c)} style={{
+              width: 28, height: 28, borderRadius: "50%", background: c,
+              border: selectedColor === c
+                ? "2.5px solid var(--text-primary)"
+                : (isVeryLight ? "2.5px solid var(--border-strong)" : "2.5px solid transparent"),
+              boxShadow: selectedColor === c ? "0 0 0 2px var(--surface)" : "none",
+              cursor: "pointer", padding: 0,
+            }} aria-label={`Set color ${c}`} />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, onColorChange, onDeleteClass }) {
   const [showAdd, setShowAdd] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -835,13 +1100,8 @@ function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, 
           <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>
             Accent color
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-            {PALETTE.map(c => (
-              <button key={c} onClick={() => onColorChange(c)} style={{
-                width: 28, height: 28, borderRadius: "50%", background: c, border: cls.color === c ? "2.5px solid var(--text-primary)" : "2.5px solid transparent",
-                cursor: "pointer", padding: 0,
-              }} aria-label={`Set color ${c}`} />
-            ))}
+          <div style={{ marginBottom: 16 }}>
+            <ColorPackPicker selectedColor={cls.color} onSelect={onColorChange} />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => { setEditing(true); setShowManage(false); }} style={{
@@ -1164,15 +1424,35 @@ function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReord
     return tasks.filter(t => !t.done && t.dueDate === today);
   }, [tasks]);
 
+  const streak = useMemo(() => computeStreak(tasks), [tasks]);
+
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
       {dueTodayTasks.length > 0 && (
         <DueTodayBanner tasks={dueTodayTasks} classById={classById} onOpenClass={onOpenClass} onToggle={onToggleTask} />
       )}
 
-      <div style={{ padding: "28px 0 22px" }}>
+      <div style={{ padding: "28px 0 22px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>My classes</h1>
+        {streak >= 2 && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 5,
+            background: "#D4884F1a", color: "#C67A3F",
+            borderRadius: 20, padding: "6px 12px",
+            fontSize: 13, fontWeight: 700, flexShrink: 0,
+          }}>
+            <Icon name="flame" size={14} />
+            {streak} day{streak === 1 ? "" : "s"}
+          </div>
+        )}
       </div>
+
+      {classes.length === 0 && (
+        <div style={{ textAlign: "center", padding: "56px 20px", color: "var(--text-muted)" }}>
+          <div style={{ fontSize: 15, marginBottom: 4 }}>No classes yet</div>
+          <div style={{ fontSize: 13.5 }}>Add your first class, club, or activity below to get started.</div>
+        </div>
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }} onDrop={handleDrop} onDragOver={e => e.preventDefault()}>
         {classes.map((cls, i) => (
@@ -1223,6 +1503,29 @@ function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReord
 /* ---------- all tasks screen ---------- */
 
 function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
+  const [query, setQuery] = useState("");
+  const trimmedQuery = query.trim().toLowerCase();
+  const isSearching = trimmedQuery.length > 0;
+
+  const classById = useMemo(() => {
+    const m = {};
+    classes.forEach(c => { m[c.id] = c; });
+    return m;
+  }, [classes]);
+
+  const searchResults = useMemo(() => {
+    if (!isSearching) return [];
+    return tasks
+      .filter(t => t.title.toLowerCase().includes(trimmedQuery))
+      .sort((a, b) => {
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        const ad = a.dueDate || "9999-99-99";
+        const bd = b.dueDate || "9999-99-99";
+        if (ad !== bd) return ad < bd ? -1 : 1;
+        return b.createdAt - a.createdAt;
+      });
+  }, [tasks, trimmedQuery, isSearching]);
+
   const byClass = useMemo(() => {
     const groups = classes
       .map(c => {
@@ -1252,33 +1555,90 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
-      <div style={{ padding: "28px 0 22px" }}>
+      <div style={{ padding: "28px 0 14px" }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>All tasks</h1>
       </div>
 
-      {total === 0 && (
-        <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--text-muted)", fontSize: 15 }}>
-          Nothing due anywhere. Enjoy it.
-        </div>
-      )}
-
-      {byClass.map(({ cls, items }) => (
-        <div key={cls.id} style={{ marginBottom: 22 }}>
-          <button onClick={() => onOpenClass(cls.id)} style={{
-            display: "flex", alignItems: "center", gap: 8, background: "none", border: "none",
-            cursor: "pointer", padding: "0 0 8px", color: "var(--text-primary)",
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8, marginBottom: 20,
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: "var(--radius-control)", padding: "10px 13px",
+      }}>
+        <Icon name="search" size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search tasks"
+          style={{
+            flex: 1, border: "none", outline: "none", background: "transparent",
+            fontSize: 14.5, color: "var(--text-primary)", fontFamily: "inherit",
+          }}
+        />
+        {query && (
+          <button onClick={() => setQuery("")} aria-label="Clear search" style={{
+            background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)",
+            display: "flex", padding: 2,
           }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: cls.color }} />
-            <span style={{ fontSize: 14.5, fontWeight: 600 }}>{cls.name}</span>
-            <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{items.length}</span>
+            <Icon name="x" size={14} />
           </button>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", padding: "2px 14px", boxShadow: "var(--shadow)" }}>
-            {items.map(t => (
-              <TaskRow key={t.id} task={t} color={cls.color} onToggle={onToggle} onDelete={onDelete} />
-            ))}
+        )}
+      </div>
+
+      {isSearching ? (
+        searchResults.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)", fontSize: 14.5 }}>
+            No tasks match "{query.trim()}"
           </div>
-        </div>
-      ))}
+        ) : (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", padding: "2px 14px", boxShadow: "var(--shadow)" }}>
+            {searchResults.map(t => {
+              const cls = classById[t.classId];
+              return (
+                <div key={t.id}>
+                  <button
+                    onClick={() => cls && onOpenClass(cls.id)}
+                    style={{
+                      background: "none", border: "none", padding: "10px 0 0", cursor: cls ? "pointer" : "default",
+                      display: "flex", alignItems: "center", gap: 6, color: "var(--text-secondary)", fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {cls && <span style={{ width: 7, height: 7, borderRadius: "50%", background: cls.color }} />}
+                    {cls ? cls.name : "Unknown class"}
+                  </button>
+                  <TaskRow task={t} color={cls ? cls.color : "var(--text-muted)"} onToggle={onToggle} onDelete={onDelete} />
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        <>
+          {total === 0 && (
+            <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--text-muted)", fontSize: 15 }}>
+              Nothing due anywhere. Enjoy it.
+            </div>
+          )}
+
+          {byClass.map(({ cls, items }) => (
+            <div key={cls.id} style={{ marginBottom: 22 }}>
+              <button onClick={() => onOpenClass(cls.id)} style={{
+                display: "flex", alignItems: "center", gap: 8, background: "none", border: "none",
+                cursor: "pointer", padding: "0 0 8px", color: "var(--text-primary)",
+              }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: cls.color }} />
+                <span style={{ fontSize: 14.5, fontWeight: 600 }}>{cls.name}</span>
+                <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{items.length}</span>
+              </button>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", padding: "2px 14px", boxShadow: "var(--shadow)" }}>
+                {items.map(t => (
+                  <TaskRow key={t.id} task={t} color={cls.color} onToggle={onToggle} onDelete={onDelete} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }
@@ -1725,7 +2085,14 @@ function SettingsScreen({
   const totalDone = tasks.filter(t => t.done).length;
   const [enterMode, setEnterMode] = useState(false);
   const [codeInput, setCodeInput] = useState("");
-  const firebaseReady = isFirebaseReady();
+  const [firebaseReady, setFirebaseReady] = useState(isFirebaseReady());
+
+  useEffect(() => {
+    if (firebaseReady) return;
+    const handler = () => setFirebaseReady(isFirebaseReady());
+    window.addEventListener("firebase-ready", handler);
+    return () => window.removeEventListener("firebase-ready", handler);
+  }, [firebaseReady]);
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
@@ -1932,6 +2299,45 @@ function NavBar({ tab, setTab, allCount }) {
 
 /* ---------- floating quick-add ---------- */
 
+/* ---------- undo toast ---------- */
+
+function UndoToast({ entry, onUndo, onDismiss }) {
+  if (!entry) return null;
+  return (
+    <div style={{
+      position: "fixed", left: "50%", bottom: "max(94px, 10vh)",
+      transform: "translateX(-50%)",
+      zIndex: 50,
+      animation: "riseInCenter 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 12,
+        background: "var(--surface-raised)", border: "1px solid var(--border)",
+        borderRadius: 14, boxShadow: "var(--shadow-lift)",
+        padding: "10px 10px 10px 16px",
+        backdropFilter: "blur(20px)",
+      }}>
+        <span style={{ fontSize: 13.5, color: "var(--text-primary)", fontWeight: 500, whiteSpace: "nowrap" }}>
+          {entry.label}
+        </span>
+        <button onClick={onUndo} style={{
+          background: "none", border: "none", cursor: "pointer",
+          color: "var(--text-primary)", fontSize: 13.5, fontWeight: 700,
+          padding: "6px 10px", borderRadius: 8,
+        }}>
+          Undo
+        </button>
+        <button onClick={onDismiss} aria-label="Dismiss" style={{
+          background: "none", border: "none", cursor: "pointer",
+          color: "var(--text-muted)", padding: 6, borderRadius: 8, display: "flex",
+        }}>
+          <Icon name="x" size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function FloatingAdd({ classes, activeClassId, onAdd }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -2055,6 +2461,16 @@ function App() {
   const [syncStatus, setSyncStatus] = useState(null);
   const lastPushedAt = useRef(0);
   const suppressNextRemoteApply = useRef(false);
+  const [firebaseReadyTick, setFirebaseReadyTick] = useState(isFirebaseReady());
+
+  // Firebase's setup script loads separately and can finish after this app
+  // has already mounted — this makes sure sync retries once it's actually ready.
+  useEffect(() => {
+    if (firebaseReadyTick) return;
+    const handler = () => setFirebaseReadyTick(isFirebaseReady());
+    window.addEventListener("firebase-ready", handler);
+    return () => window.removeEventListener("firebase-ready", handler);
+  }, [firebaseReadyTick]);
 
   useEffect(() => {
     saveState({ classes, tasks, theme });
@@ -2073,7 +2489,7 @@ function App() {
         .catch(() => setSyncStatus("error"));
     }, 500);
     return () => clearTimeout(t);
-  }, [classes, tasks, syncCode]);
+  }, [classes, tasks, syncCode, firebaseReadyTick]);
 
   // Stay live-connected to the cloud copy while synced, so changes made on
   // another device show up here within about a second — no refresh needed.
@@ -2088,7 +2504,7 @@ function App() {
       setSyncStatus("saved");
     });
     return unsubscribe;
-  }, [syncCode]);
+  }, [syncCode, firebaseReadyTick]);
 
   const createSync = useCallback(() => {
     const code = generateSyncCode();
@@ -2147,13 +2563,60 @@ function App() {
     setTasks(t => [...t, { id: uid(), classId, title, done: false, dueDate: dueDate || tomorrowISO(), createdAt: Date.now() }]);
   }, []);
 
-  const toggleTask = useCallback((taskId) => {
-    setTasks(t => t.map(task => task.id === taskId ? { ...task, done: !task.done } : task));
+  const [undoStack, setUndoStack] = useState([]);
+  const undoTimerRef = useRef(null);
+
+  const pushUndo = useCallback((entry) => {
+    setUndoStack(s => [...s.slice(-2), entry]); // keep at most 3 queued, oldest drop off
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => {
+      setUndoStack(s => s.slice(1));
+    }, 4500);
   }, []);
 
-  const deleteTask = useCallback((taskId) => {
-    setTasks(t => t.filter(task => task.id !== taskId));
+  const dismissUndo = useCallback(() => {
+    setUndoStack(s => s.slice(1));
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
   }, []);
+
+  const undoLast = useCallback(() => {
+    setUndoStack(s => {
+      const entry = s[0];
+      if (entry) entry.restore();
+      return s.slice(1);
+    });
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+  }, []);
+
+  const toggleTask = useCallback((taskId) => {
+    setTasks(t => {
+      const task = t.find(x => x.id === taskId);
+      const willComplete = task && !task.done;
+      if (willComplete) {
+        pushUndo({
+          label: "Task completed",
+          restore: () => setTasks(t2 => t2.map(x => x.id === taskId ? { ...x, done: false, completedAt: null } : x)),
+        });
+      }
+      return t.map(x => x.id === taskId
+        ? { ...x, done: !x.done, completedAt: !x.done ? Date.now() : null }
+        : x
+      );
+    });
+  }, [pushUndo]);
+
+  const deleteTask = useCallback((taskId) => {
+    setTasks(t => {
+      const removed = t.find(x => x.id === taskId);
+      if (removed) {
+        pushUndo({
+          label: "Task deleted",
+          restore: () => setTasks(t2 => [...t2, removed]),
+        });
+      }
+      return t.filter(x => x.id !== taskId);
+    });
+  }, [pushUndo]);
 
   const addClass = useCallback((name, category) => {
     const color = PALETTE[classes.length % PALETTE.length];
@@ -2237,6 +2700,7 @@ function App() {
       <div style={{ flex: 1 }}>{content}</div>
       <NavBar tab={openClass ? "classes" : tab} setTab={(t) => { setOpenClassId(null); setTab(t); }} allCount={allActiveCount} />
       <FloatingAdd classes={classes} activeClassId={openClass ? openClass.id : null} onAdd={addTask} />
+      <UndoToast entry={undoStack[0] || null} onUndo={undoLast} onDismiss={dismissUndo} />
     </div>
   );
 }
