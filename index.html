@@ -52,7 +52,8 @@
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
-  #app-shell { min-height: 100vh; min-height: 100dvh; }
+  #app-shell { min-height: 100vh; min-height: 100dvh; animation: appFadeIn 0.35s ease; }
+  @keyframes appFadeIn { from { opacity: 0; } to { opacity: 1; } }
   body {
     margin: 0;
     background: var(--bg);
@@ -70,6 +71,12 @@
   }
   #root { height: 100%; }
   button { font-family: inherit; }
+  button:not(.no-press) {
+    transition: transform 0.12s cubic-bezier(0.4,0,0.2,1), opacity 0.12s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  button:not(.no-press):active {
+    transform: scale(0.96);
+  }
   ::selection { background: rgba(120,120,255,0.25); }
 
   @media (prefers-reduced-motion: reduce) {
@@ -310,6 +317,7 @@ function TaskCheckbox({ checked, onToggle, color }) {
     <button
       onClick={onToggle}
       aria-label={checked ? "Mark task incomplete" : "Mark task complete"}
+      className="no-press"
       style={{
         width: 26, height: 26, borderRadius: "50%",
         border: `2px solid ${checked ? color : "var(--border-strong)"}`,
@@ -1503,6 +1511,7 @@ function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReord
 /* ---------- all tasks screen ---------- */
 
 function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
+  const [viewMode, setViewMode] = useState("important");
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim().toLowerCase();
   const isSearching = trimmedQuery.length > 0;
@@ -1551,12 +1560,38 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
     return groups;
   }, [classes, tasks]);
 
+  const importantTasks = useMemo(() => {
+    const cutoff = tomorrowISO();
+    return tasks
+      .filter(t => !t.done && t.dueDate && t.dueDate <= cutoff)
+      .sort((a, b) => {
+        const ad = a.dueDate || "9999-99-99";
+        const bd = b.dueDate || "9999-99-99";
+        if (ad !== bd) return ad < bd ? -1 : 1;
+        return a.createdAt - b.createdAt;
+      });
+  }, [tasks]);
+
   const total = byClass.reduce((n, g) => n + g.items.length, 0);
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
-      <div style={{ padding: "28px 0 14px" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>All tasks</h1>
+      <div style={{ padding: "28px 0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>Tasks</h1>
+        {!isSearching && (
+          <div style={{ display: "flex", gap: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 11, padding: 3 }}>
+            {[["important", "Important"], ["all", "All"]].map(([key, label]) => (
+              <button key={key} onClick={() => setViewMode(key)} style={{
+                padding: "6px 13px", borderRadius: 8, border: "none", cursor: "pointer",
+                background: viewMode === key ? "var(--text-primary)" : "transparent",
+                color: viewMode === key ? "var(--bg)" : "var(--text-secondary)",
+                fontSize: 13, fontWeight: 600, transition: "all 0.15s ease",
+              }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={{
@@ -1607,6 +1642,27 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
                     {cls ? cls.name : "Unknown class"}
                   </button>
                   <TaskRow task={t} color={cls ? cls.color : "var(--text-muted)"} onToggle={onToggle} onDelete={onDelete} />
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : viewMode === "important" ? (
+        importantTasks.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--text-muted)", fontSize: 15 }}>
+            Nothing due today or tomorrow.
+          </div>
+        ) : (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow)", overflow: "hidden" }}>
+            {importantTasks.map(t => {
+              const cls = classById[t.classId];
+              const stripColor = cls ? cls.color : "var(--text-muted)";
+              return (
+                <div key={t.id} style={{ display: "flex", alignItems: "stretch" }}>
+                  <div style={{ width: 4, background: stripColor, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <TaskRow task={t} color={stripColor} onToggle={onToggle} onDelete={onDelete} />
+                  </div>
                 </div>
               );
             })}
@@ -2251,8 +2307,8 @@ function SettingsScreen({
 function NavBar({ tab, setTab, allCount }) {
   const items = [
     { key: "classes", label: "Classes", icon: "grid" },
-    { key: "calendar", label: "Calendar", icon: "calendar" },
     { key: "all", label: "All tasks", icon: "list" },
+    { key: "calendar", label: "Calendar", icon: "calendar" },
     { key: "settings", label: "Settings", icon: "settings" },
   ];
   return (
@@ -2343,6 +2399,7 @@ function FloatingAdd({ classes, activeClassId, onAdd }) {
   const [title, setTitle] = useState("");
   const [classId, setClassId] = useState(activeClassId || (classes[0] && classes[0].id));
   const [dueDate, setDueDate] = useState(tomorrowISO());
+  const [pressed, setPressed] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -2429,6 +2486,7 @@ function FloatingAdd({ classes, activeClassId, onAdd }) {
       <button
         onClick={() => setOpen(o => !o)}
         aria-label="Add task"
+        className="no-press"
         style={{
           position: "fixed", right: 24, bottom: "max(96px, 11vh)",
           width: 54, height: 54, borderRadius: "50%",
@@ -2436,9 +2494,14 @@ function FloatingAdd({ classes, activeClassId, onAdd }) {
           border: "none", boxShadow: "var(--shadow-lift)",
           display: "flex", alignItems: "center", justifyContent: "center",
           cursor: "pointer", zIndex: 42,
-          transform: open ? "rotate(45deg)" : "rotate(0deg)",
-          transition: "transform 0.2s cubic-bezier(0.4,0,0.2,1)",
+          transform: `${open ? "rotate(45deg)" : "rotate(0deg)"} scale(${pressed ? 0.9 : 1})`,
+          transition: "transform 0.15s cubic-bezier(0.4,0,0.2,1), box-shadow 0.15s ease",
         }}
+        onMouseDown={() => setPressed(true)}
+        onMouseUp={() => setPressed(false)}
+        onMouseLeave={() => setPressed(false)}
+        onTouchStart={() => setPressed(true)}
+        onTouchEnd={() => setPressed(false)}
       >
         <Icon name="plus" size={24} />
       </button>
@@ -2644,11 +2707,26 @@ function App() {
   }, []);
 
   const deleteClass = useCallback((id) => {
-    setClasses(c => c.filter(cls => cls.id !== id));
-    setTasks(t => t.filter(task => task.classId !== id));
+    setClasses(c => {
+      const removedClass = c.find(cls => cls.id === id);
+      setTasks(t => {
+        const removedTasks = t.filter(task => task.classId === id);
+        if (removedClass) {
+          pushUndo({
+            label: `${removedClass.name} deleted`,
+            restore: () => {
+              setClasses(c2 => [...c2, removedClass]);
+              setTasks(t2 => [...t2, ...removedTasks]);
+            },
+          });
+        }
+        return t.filter(task => task.classId !== id);
+      });
+      return c.filter(cls => cls.id !== id);
+    });
     setOpenClassId(null);
     setTab("classes");
-  }, []);
+  }, [pushUndo]);
 
   const exportData = useCallback(() => {
     const data = JSON.stringify({ classes, tasks }, null, 2);
