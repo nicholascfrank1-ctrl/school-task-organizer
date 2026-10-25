@@ -3,19 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<link rel="icon" type="image/png" href="./school-organizer-icon.png">
-<link rel="apple-touch-icon" href="./school-organizer-icon.png">
 <title>Classes</title>
+<meta name="description" content="Organize your classes, tasks, and everyday events in one simple calendar." />
 
 <!-- PWA / home screen icon setup -->
-<link rel="manifest" href="manifest.json" />
-<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png" />
-<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png" />
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png" />
-<link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png" />
-<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png" />
-<meta name="theme-color" content="#181816" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" type="image/png" href="./classes-dark-liquid-glass-icon.png" />
+<link rel="apple-touch-icon" href="./classes-dark-liquid-glass-icon.png" />
+<meta name="theme-color" content="#1c1c1e" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Classes" />
@@ -32,8 +27,10 @@
     --text-muted: #A3A39C;
     --shadow: 0 1px 2px rgba(20,20,18,0.04), 0 1px 8px rgba(20,20,18,0.03);
     --shadow-lift: 0 4px 16px rgba(20,20,18,0.08), 0 1px 3px rgba(20,20,18,0.06);
-    --radius-card: 18px;
-    --radius-control: 12px;
+    /* Shared rounded geometry across all interface surfaces and controls. */
+    --radius-iphone: 40px;
+    --radius-card: var(--radius-iphone);
+    --radius-control: var(--radius-iphone);
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, sans-serif;
     color-scheme: light;
   }
@@ -86,6 +83,580 @@
   @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
   @keyframes popIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
   @keyframes riseInCenter { from { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.96); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
+
+  /* iPhone layout: readable fields, safe-area spacing, and reachable controls. */
+  html { -webkit-text-size-adjust: 100%; }
+  input, select, textarea { font-family: inherit; min-width: 0; max-width: 100%; }
+  button { touch-action: manipulation; }
+  h1 { min-width: 0; overflow-wrap: anywhere; }
+  .native-date { display: none; }
+  .touch-reorder { display: none; }
+  @media (max-width: 639px), (pointer: coarse), (max-width: 956px) and (max-height: 500px) {
+    input, select, textarea { font-size: 16px !important; }
+    button { min-height: 44px; min-width: 44px; }
+    .native-date { display: flex; align-items: center; gap: 6px; }
+    .native-date input { min-height: 44px; width: 100%; border: 0; background: transparent; color: inherit; }
+    .custom-date { display: none !important; }
+    .touch-reorder { display: flex; flex-direction: column; }
+    .desktop-grip { display: none !important; }
+    .touch-reorder button { padding: 4px; background: none; border: none; color: var(--text-secondary); }
+    .touch-reorder button:disabled { opacity: .25; }
+  }
+  @media (max-width: 639px), (max-width: 956px) and (max-height: 500px) {
+    body { padding-bottom: 0; }
+    #app-shell { min-height: calc(100dvh - env(safe-area-inset-top, 0px)); }
+    .screen { padding: 0 16px calc(176px + env(safe-area-inset-bottom, 0px)) !important; }
+    .bottom-nav { position: fixed !important; z-index: 30; padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)) !important; }
+    .bottom-nav > div { width: 100%; max-width: 460px; justify-content: space-around; border-radius: var(--radius-iphone) !important; }
+    .bottom-nav button { flex: 1; min-width: 0; flex-direction: column; gap: 4px !important; padding: 8px 2px !important; font-size: 11px !important; }
+    .bottom-nav button span { display: inline !important; }
+    .floating-add { right: max(16px, env(safe-area-inset-right, 0px)) !important; bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important; }
+    .task-row { display: grid !important; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 4px 8px !important; max-height: none; }
+    .task-row:not([data-leaving="true"]) { max-height: none !important; }
+    .task-title { grid-column: 2; min-width: 0; overflow-wrap: anywhere; }
+    .task-due { grid-column: 2; grid-row: 2; justify-self: start; }
+    .task-row > button:first-child { grid-column: 1; grid-row: 1 / span 2; width: 44px !important; height: 44px !important; }
+    .task-delete { grid-column: 3; grid-row: 1 / span 2; justify-content: center; align-self: center; }
+    .quick-add { flex-wrap: wrap; }
+    .quick-add > input { flex-basis: calc(100% - 60px) !important; min-height: 44px; }
+    .quick-add > .date-control { order: 3; flex-basis: 100%; }
+    .class-open { min-width: 0; }
+    .mobile-sheet {
+      top: auto !important; bottom: calc(var(--keyboard-inset, 0px) + 12px) !important;
+      left: max(12px, env(safe-area-inset-left, 0px)) !important;
+      right: max(12px, env(safe-area-inset-right, 0px)) !important;
+      width: auto !important; transform: none !important;
+      max-height: calc(var(--visual-height, 100dvh) - env(safe-area-inset-top, 0px) - 24px);
+      overflow-y: auto; overscroll-behavior: contain; animation: fadeIn .18s ease !important;
+      padding-bottom: max(18px, env(safe-area-inset-bottom, 0px)) !important;
+    }
+    .sheet-fields { flex-wrap: wrap; }
+    .sheet-fields > select, .sheet-fields > .date-control { flex-basis: 100%; width: 100%; }
+    .undo-toast { right: max(16px, env(safe-area-inset-right, 0px)) !important; bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important; width: min(360px, calc(100% - 32px)); }
+    .undo-toast > div > span { white-space: normal !important; overflow-wrap: anywhere; min-width: 0; flex: 1; }
+    .undo-toast button { flex-shrink: 0; }
+    .month-grid button { min-width: 0; }
+    .color-swatch { min-width: 44px; min-height: 44px; }
+  }
+
+
+  /* A small motion system: quick feedback, gentle arrivals, no looping effects. */
+  :root { --accent: #7772CE; --accent-soft: #EEEDF9; --ease-out: cubic-bezier(.22,1,.36,1); }
+  [data-theme="dark"] { --accent: #B9B3FF; --accent-soft: #2B2940; }
+  body { background-image: radial-gradient(ellipse at 50% 0%, var(--accent-soft), transparent 530px); }
+  .screen-stage { animation: screenArrive .34s var(--ease-out) both; }
+  @keyframes screenArrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .class-list > div { animation: cardArrive .42s var(--ease-out) both; animation-delay: var(--arrival-delay, 0ms); }
+  @keyframes cardArrive { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+  .class-card { position: relative; }
+  .class-card::before { content: ""; position: absolute; top: 24px; bottom: 24px; left: 12px; width: 3px; border-radius: var(--radius-iphone); background: var(--class-color); opacity: .7; pointer-events: none; }
+  .class-open:active { transform: scale(.985) !important; }
+  .class-open > div:first-child { transition: transform .3s var(--ease-out); }
+  .class-open[aria-expanded="true"] > div:first-child { transform: rotate(-7deg) scale(1.06); }
+  .class-list { position: relative; }
+  .task-enter { animation: cardArrive .26s var(--ease-out) both; }
+  .task-check { position: relative; }
+  .task-check[data-celebrating="true"] { animation: checkPop .4s var(--ease-out); background: var(--check-color) !important; border-color: var(--check-color) !important; }
+  .task-check[data-celebrating="true"]::after { content: ""; position: absolute; inset: -5px; border: 2px solid var(--check-color); border-radius: 50%; animation: checkRing .45s ease-out both; pointer-events: none; }
+  @keyframes checkPop { 0% { transform: scale(.85); } 45% { transform: scale(1.14); } 100% { transform: scale(1); } }
+  @keyframes checkRing { from { opacity: .8; transform: scale(.75); } to { opacity: 0; transform: scale(1.45); } }
+  .task-row[data-completing="true"] .task-title { color: var(--text-secondary) !important; text-decoration: line-through; }
+  .focus-card { position: relative; overflow: hidden; padding: 22px; margin: 0 0 24px; border: 1px solid var(--border); border-radius: var(--radius-iphone); background: linear-gradient(135deg, var(--accent-soft), var(--surface)); box-shadow: var(--shadow); }
+  .focus-top { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+  .eyebrow { margin: 0 0 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--accent); }
+  .focus-title { margin: 0; font-size: clamp(23px, 5.8vw, 29px); font-weight: 700; letter-spacing: -.04em; line-height: 1.15; }
+  .focus-copy { margin: 9px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+  .focus-emblem { flex-shrink: 0; width: 48px; height: 48px; border-radius: var(--radius-iphone); background: var(--surface); color: var(--accent); display: flex; align-items: center; justify-content: center; transform: rotate(-8deg); box-shadow: var(--shadow); }
+  .focus-track { height: 5px; background: var(--border); border-radius: var(--radius-iphone); margin-top: 20px; overflow: hidden; }
+  .focus-fill { height: 100%; background: var(--accent); border-radius: inherit; transition: width .6s var(--ease-out); transform-origin: left; animation: progressArrive .65s var(--ease-out) both; }
+  @keyframes progressArrive { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .focus-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 9px; font-size: 11px; color: var(--text-secondary); }
+  .nav-track { position: relative; width: 460px; max-width: 100%; gap: 0 !important; isolation: isolate; }
+  .nav-track > button { flex: 1; min-width: 0; justify-content: center; padding-left: 4px !important; padding-right: 4px !important; z-index: 1; background: transparent !important; }
+  .nav-pill { position: absolute; z-index: 0; left: 6px; top: 6px; bottom: 6px; width: calc((100% - 12px) / 4); background: var(--text-primary); border-radius: var(--radius-iphone); transform: translateX(calc(var(--active-tab) * 100%)); transition: transform .38s cubic-bezier(.22,1,.36,1); pointer-events: none; }
+  .nav-track button[aria-current="page"] > svg { animation: navPop .3s var(--ease-out); }
+  @keyframes navPop { from { transform: translateY(3px) scale(.85); } to { transform: none; } }
+  .floating-add { background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: 0 5px 18px var(--accent-glow), var(--shadow-lift) !important; animation: fabArrive .45s var(--ease-out) both; }
+  [data-theme="dark"] .floating-add { color: var(--on-accent) !important; }
+  @keyframes fabArrive { from { opacity: 0; translate: 0 12px; scale: .85; } to { opacity: 1; translate: 0; scale: 1; } }
+  .quick-add:focus-within { border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-soft); transition: box-shadow .2s ease, border-color .2s ease; }
+  .mobile-sheet input:focus { border-color: var(--accent) !important; }
+  .sheet-step { animation: screenArrive .24s var(--ease-out); }
+  .centered-sheet { animation: dialogSpring .3s var(--ease-out) both !important; }
+  @keyframes dialogSpring { from { opacity: 0; transform: translate(-50%, -46%) scale(.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+  .undo-toast { filter: drop-shadow(0 5px 16px #0001); }
+  .toast-check { display: flex; align-items: center; justify-content: center; color: var(--accent); flex-shrink: 0; animation: checkPop .4s var(--ease-out); }
+  .empty-orbit { width: 64px; height: 64px; margin: 0 auto 18px; border-radius: var(--radius-iphone); display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); transform: rotate(-8deg); animation: cardArrive .5s var(--ease-out) both; }
+  @media (hover: hover) and (pointer: fine) {
+    .class-card:hover { box-shadow: var(--shadow-lift) !important; border-color: var(--border-strong) !important; }
+    .floating-add:hover { scale: 1.06; }
+    .touch-reorder button:hover { color: var(--accent); }
+  }
+  @media (max-width: 639px), (max-width: 956px) and (max-height: 500px) {
+    .mobile-sheet { animation: sheetSpring .36s var(--ease-out) both !important; }
+    @keyframes sheetSpring { from { opacity: 0; translate: 0 28px; } to { opacity: 1; translate: 0; } }
+    .focus-card { padding: 20px; }
+    .focus-emblem { width: 42px; height: 42px; border-radius: var(--radius-iphone); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+    .task-check::after { display: none; }
+  }
+
+  .field-label { display: block; margin: 0 0 13px; font-size: 12px; font-weight: 650; color: var(--text-secondary); }
+  .field-label > input, .field-label > select { display: block; width: 100%; margin-top: 7px; padding: 11px 12px; min-height: 44px; font: inherit; font-size: 16px; border-radius: var(--radius-iphone); border: 1px solid var(--border-strong); background: var(--bg); color: var(--text-primary); }
+  .field-label > :disabled { opacity: .6; }
+  .field-optional { font-weight: 400; }
+  .editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .editor-heading h2 { margin: 0; font-size: 20px; letter-spacing: -.03em; }
+  .quiet-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; min-height: 44px; flex-shrink: 0; background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--radius-iphone); cursor: pointer; }
+  .edit-backdrop { position: fixed; inset: 0; z-index: 60; background: #0005; backdrop-filter: blur(4px); animation: fadeIn .16s ease; }
+  .edit-sheet { position: fixed; z-index: 61; top: 50%; left: 50%; transform: translate(-50%,-50%); width: min(440px,calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow-y: auto; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-iphone); padding: 20px; box-shadow: var(--shadow-lift); }
+  .primary-action { width: 100%; min-height: 46px; border: none; border-radius: var(--radius-iphone); background: var(--accent); color: var(--on-accent); font: inherit; font-weight: 650; cursor: pointer; }
+  [data-theme="dark"] .primary-action { color: var(--on-accent); }
+  .primary-action:disabled { opacity: .4; cursor: default; }
+  .delete-event { display: block; width: 100%; min-height: 44px; border: none; background: none; color: #C15B5B; margin-top: 8px; font: inherit; font-size: 13px; cursor: pointer; }
+  .editor-hint, .editor-error { font-size: 12px; line-height: 1.5; margin: 0 0 14px; color: var(--text-secondary); }
+  .editor-error { color: #C15B5B; }
+  .calendar-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 28px 0 16px; }
+  .calendar-heading h1 { margin: 0; font-size: 28px; letter-spacing: -.02em; }
+  .segmented-control { position: relative; display: inline-grid; grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr)); gap: 0; padding: 3px; isolation: isolate; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-iphone); }
+  .segmented-control > button { position: relative; z-index: 1; min-width: 44px; padding: 8px 13px; border: none; border-radius: var(--radius-iphone); background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: color .18s ease; }
+  .segmented-control > button[aria-pressed="true"] { color: var(--bg); }
+  .segment-pill { position: absolute; z-index: 0; left: 3px; top: 3px; bottom: 3px; width: calc((100% - 6px) / var(--segment-count)); border-radius: var(--radius-iphone); background: var(--text-primary); transform: translateX(calc(var(--active-segment) * 100%)); pointer-events: none; }
+  .segment-pill, .nav-pill { transition: transform .38s cubic-bezier(.22,1,.36,1); }
+  .calendar-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .calendar-controls > button:nth-child(2) { flex: 1; min-width: 0; background: none; border: none; color: var(--text-primary); font: inherit; font-size: 16px; font-weight: 650; cursor: pointer; }
+  .calendar-hint { color: var(--text-secondary); font-size: 12px; line-height: 1.5; margin: 14px 0 20px; }
+  .calendar-event { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; gap: 4px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--event-color); border-radius: var(--radius-iphone); padding: 8px 6px; margin: 8px 0; touch-action: pan-y; -webkit-touch-callout: none; user-select: none; transition: transform .16s ease, box-shadow .16s ease, opacity .2s ease; }
+  .calendar-event[data-pressing="true"] { transform: scale(.985); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .event-check-target { display: flex; align-items: center; justify-content: center; min-height: 44px; width: 44px; cursor: pointer; }
+  .event-check-target input { accent-color: var(--event-color); width: 22px; height: 22px; margin: 0; cursor: pointer; }
+  .event-copy { min-width: 0; }
+  .event-title { overflow-wrap: anywhere; font-size: 15px; font-weight: 550; line-height: 1.45; color: var(--text-primary); }
+  .event-meta { margin-top: 4px; color: var(--text-secondary); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+  .calendar-event[data-done="true"] .event-title, .calendar-event[data-done="true"] .event-title-button { text-decoration: line-through; color: var(--text-secondary); }
+  .calendar-event[data-done="true"] { border-left-color: var(--text-muted); }
+  .event-edit { display: flex; align-items: center; justify-content: center; width: 44px; min-height: 44px; border: none; background: none; color: var(--text-secondary); border-radius: var(--radius-iphone); cursor: pointer; }
+  .event-edit:active { background: var(--accent-soft); }
+  .calendar-month { padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-iphone); }
+  .month-labels, .month-cells { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 4px; }
+  .month-labels span { text-align: center; color: var(--text-secondary); font-size: 11px; padding: 6px 0 10px; }
+  .month-cell { border: 1px solid var(--border); border-radius: var(--radius-iphone); min-width: 0; min-height: 100px; overflow: hidden; }
+  .month-cell[data-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .month-date { display: flex; flex-direction: column; gap: 3px; align-items: center; justify-content: center; min-width: 0; width: 100%; min-height: 44px; border: none; background: none; color: var(--text-primary); font: inherit; font-size: 13px; cursor: pointer; border-radius: var(--radius-iphone); }
+  .month-cell[data-today="true"] .month-date { color: var(--accent); font-weight: 750; }
+  .month-dots { display: none; gap: 3px; height: 4px; }
+  .month-dots i { width: 4px; height: 4px; border-radius: 50%; }
+  .month-inline-events { padding: 0 8px 12px; }
+  .event-compact { grid-template-columns: 28px minmax(0,1fr); padding: 1px 1px 1px 0; border-radius: var(--radius-iphone); gap: 0; margin: 3px 0; }
+  .event-compact .event-check-target { min-height: 32px; width: 28px; }
+  .event-compact input { width: 16px; height: 16px; }
+  .event-title-button { min-width: 0; min-height: 32px; width: 100%; padding: 3px; text-align: left; font: inherit; font-size: 11px; line-height: 1.4; border: none; color: var(--text-primary); background: none; cursor: pointer; overflow-wrap: anywhere; }
+  .more-events { min-width: 0; min-height: 28px; border: none; background: none; font-size: 10px; color: var(--text-secondary); width: 100%; cursor: pointer; }
+  .calendar-agenda { margin-top: 20px; }
+  .calendar-agenda h2 { font-size: 15px; font-weight: 650; }
+  .week-day { margin-bottom: 14px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-iphone); background: var(--surface); }
+  .week-day[data-today="true"] { border-color: var(--accent); }
+  .week-day-label { min-height: 44px; padding: 4px; border: none; background: none; color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+  .calendar-empty-day { color: var(--text-secondary); font-size: 12px; margin: 4px; }
+  .calendar-empty { padding: 32px 12px; color: var(--text-secondary); text-align: center; }
+  .calendar-empty svg { color: var(--accent); }
+  .calendar-empty p { font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 12px 0 6px; }
+  .calendar-empty span { font-size: 13px; }
+  .repeat-badge { display: block; color: var(--accent); text-decoration: none; font-size: 10px; font-weight: 650; margin-top: 4px; }
+  .confetti-layer { position: fixed; inset: 0; z-index: 10000; pointer-events: none; overflow: hidden; }
+  .confetti-piece { position: absolute; width: 6px; height: 10px; background: var(--confetti-color); animation: confettiFly var(--duration) cubic-bezier(.15,.65,.35,1) both; will-change: transform, opacity; }
+  @keyframes confettiFly {
+    0% { transform: translate(-50%,-50%) rotate(0deg) scale(.4); opacity: 1; }
+    42% { transform: translate(calc(var(--dx) * .65),var(--peak)) rotate(calc(var(--spin) * .5)) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx),var(--fall)) rotate(var(--spin)) scale(.7); opacity: 0; }
+  }
+  @media (max-width: 639px), (max-width: 956px) and (max-height: 500px) {
+    .edit-sheet { max-height: calc(var(--visual-height, 100dvh) - env(safe-area-inset-top, 0px) - 24px); }
+  }
+  @media (max-width: 639px), (max-width: 956px) and (max-height: 500px) {
+    .calendar-month { padding: 12px 6px; }
+    .month-labels, .month-cells { gap: 2px; }
+    .month-cell { min-height: 48px; border: none; }
+    .month-dots { display: flex; }
+    .month-inline-events { display: none; }
+    .month-cell[data-selected="true"] .month-date { background: var(--text-primary); color: var(--bg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .confetti-layer { display: none; } }
+
+
+  /* Compact controls naturally become capsules as the shared radius is clamped. */
+  button, input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    border-radius: var(--radius-iphone);
+  }
+  .focus-card { padding: 24px; }
+  .mobile-sheet { border-radius: var(--radius-iphone) !important; }
+  .edit-sheet { padding: 24px; }
+  .event-check-target input {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-iphone);
+    background-color: var(--surface);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 75% 75%;
+    transition: background-color .18s ease, border-color .18s ease;
+  }
+  .event-check-target input:checked {
+    border-color: var(--event-color);
+    background-color: var(--event-color);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12 4 4 10-10'/%3E%3C/svg%3E");
+  }
+
+
+  /* Quiet pointer feedback and a clear, rounded indicator for keyboard navigation. */
+  button:focus, a:focus, input:focus, select:focus, textarea:focus { outline: none !important; }
+  :root:not([data-input-mode="pointer"]) button:focus-visible,
+  :root:not([data-input-mode="pointer"]) a:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--accent) !important;
+  }
+  :root:not([data-input-mode="pointer"]) .event-check-target input:focus-visible {
+    box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 4px var(--accent);
+  }
+  input:not([type="checkbox"]):not([type="radio"]):focus,
+  select:focus, textarea:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .quick-add:focus-within, .search-field:focus-within, .native-date:focus-within {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    transition: box-shadow .18s ease, border-color .18s ease;
+  }
+  .quick-add input:focus, .search-field input:focus, .native-date input:focus {
+    box-shadow: none;
+  }
+  .class-list { gap: 16px !important; }
+  .class-card-header { display: flex; align-items: center; gap: 12px; padding: 12px 18px 12px 26px; }
+  .class-card::before { left: 13px; top: 28px; bottom: 28px; opacity: .6; }
+  .touch-reorder { width: 44px; flex: 0 0 44px; align-items: center; justify-content: center; }
+  .touch-reorder button { width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+  .touch-reorder button:disabled { opacity: .18; }
+  .touch-reorder button:not(:disabled):active { background: var(--accent-soft); }
+  .class-open { gap: 12px !important; min-height: 64px; }
+  .class-title { overflow-wrap: anywhere; line-height: 1.35; }
+  .class-symbol { width: 34px !important; height: 34px !important; }
+  .class-card-details { padding: 18px 22px 22px; border-top: 1px solid var(--border); }
+  .class-card-details > button { margin-top: 8px; padding: 12px 6px !important; justify-content: center; text-align: center; }
+  .focus-card { padding: 26px; margin-bottom: 28px; }
+  .focus-top { gap: 20px; }
+  .focus-copy { margin-top: 12px; line-height: 1.6; }
+  .focus-track { margin-top: 24px; }
+  .focus-meta { margin-top: 12px; }
+  .field-label { margin-bottom: 18px; line-height: 1.5; }
+  .field-label > input, .field-label > select { margin-top: 9px; padding: 13px 18px; min-height: 48px; }
+  .editor-heading { margin-bottom: 22px; }
+  .edit-sheet { padding: 26px; }
+  .edit-sheet .primary-action { margin-top: 6px; }
+  .calendar-heading { padding-bottom: 20px; row-gap: 16px; }
+  .calendar-hint { margin: 18px 2px 24px; }
+  .calendar-event { margin: 12px 0; padding: 12px 10px; gap: 8px; }
+  .event-meta { margin-top: 6px; line-height: 1.6; }
+  .event-compact { margin: 4px 0; padding: 3px 2px; gap: 0; }
+  .week-day { padding: 18px; margin-bottom: 18px; }
+  .calendar-agenda { margin-top: 24px; }
+  .calendar-agenda h2 { margin: 0 4px 16px; }
+  .calendar-month { padding: 16px 12px; }
+  .task-surface { padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow); overflow: hidden; }
+  .search-field { padding: 14px 18px !important; margin-bottom: 24px !important; }
+  .quick-add { padding: 12px 16px !important; gap: 10px !important; }
+  .undo-toast > div { padding: 12px 14px 12px 20px !important; gap: 10px !important; }
+  @media (max-width: 639px), (max-width: 956px) and (max-height: 500px) {
+    .screen { padding-left: 18px !important; padding-right: 18px !important; }
+    .mobile-sheet { padding: 24px !important; padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)) !important; }
+    .sheet-fields { gap: 12px !important; margin-bottom: 18px !important; }
+    .task-row { column-gap: 10px !important; }
+    .calendar-month { padding: 14px 8px; }
+  }
+  @media (max-width: 359px) {
+    .screen { padding-left: 16px !important; padding-right: 16px !important; }
+    .class-card-header { gap: 10px; padding-right: 16px; padding-left: 24px; }
+    .class-symbol { display: none !important; }
+    .class-open { gap: 10px !important; }
+    .focus-card { padding: 24px; }
+    .focus-top { gap: 12px; }
+    .calendar-event { column-gap: 4px; padding-left: 6px; padding-right: 6px; }
+  }
+
+
+  /* Keep floating app controls out of the way while any sheet is open. */
+  body[data-sheet-open="true"] .floating-add,
+  body[data-sheet-open="true"] .bottom-nav,
+  body[data-sheet-open="true"] .undo-toast {
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+
+  /* Compact cards and agenda rows; rounded outer surfaces keep the same visual language. */
+  .class-list { gap: 10px !important; }
+  .class-card-header { padding: 12px 18px 12px 24px; gap: 10px; }
+  .class-open { min-height: 48px; gap: 10px !important; }
+  .class-card::before { top: 22px; bottom: auto; height: 32px; left: 12px; }
+  .class-symbol { width: 30px !important; height: 30px !important; }
+  .class-card-details { padding: 12px 16px 14px; }
+  .class-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
+  .class-card-actions > button { min-height: 44px; width: auto !important; padding: 8px 10px !important; gap: 6px !important; }
+  .class-card-actions .touch-reorder { width: auto; flex: 0 0 auto; flex-direction: row; gap: 4px; }
+  .class-card-actions .touch-reorder button { width: 44px; min-height: 44px; }
+  .quick-add {
+    display: grid; grid-template-columns: minmax(0,1fr) 44px; align-items: center;
+    gap: 0 8px !important; padding: 6px 10px !important;
+    background: var(--bg); border: 1px solid var(--border-strong);
+    border-radius: var(--radius-iphone); box-shadow: none !important;
+  }
+  .quick-add:focus-within { border-color: var(--accent) !important; box-shadow: none !important; }
+  .quick-add > input, .quick-add > input:not([type="checkbox"]):not([type="radio"]):focus {
+    grid-column: 1; grid-row: 1; width: 100%; min-height: 44px; min-width: 0;
+    padding: 7px 8px; margin: 0; border: 0 !important; outline: none !important;
+    border-radius: 0 !important; box-shadow: none !important; background: transparent;
+    color: var(--text-primary); font: inherit; font-size: 16px;
+  }
+  .quick-add-submit {
+    grid-column: 2; grid-row: 1; display: flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; min-height: 44px; padding: 0; border: none;
+    border-radius: var(--radius-iphone); background: var(--text-primary); color: var(--bg); cursor: pointer;
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  .quick-add-submit:disabled { opacity: .2; cursor: default; }
+  .quick-add > .date-control { grid-column: 1 / -1; grid-row: 2; min-width: 0; border-top: 1px solid var(--border); margin-top: 4px; padding: 2px 6px 0; }
+  .quick-add .native-date { border: none !important; border-radius: 0; padding: 0 !important; background: transparent !important; gap: 8px; box-shadow: none !important; }
+  .quick-add .native-date::before { content: "Due"; font-size: 12px; color: var(--text-secondary); }
+  .quick-add .native-date > svg { display: none; }
+  .quick-add .native-date input, .quick-add .native-date input:focus { flex: 1; width: 100%; min-width: 0; min-height: 40px; padding: 4px 0; border: 0 !important; box-shadow: none !important; border-radius: 0; }
+  .quick-add .custom-date { background: transparent !important; border: none !important; padding: 6px 0 !important; }
+  .focus-card { padding: 20px 24px; margin-bottom: 20px; }
+  .focus-copy { margin-top: 8px; line-height: 1.5; }
+  .focus-track { margin-top: 16px; }
+  .focus-meta { margin-top: 8px; }
+  .calendar-heading { padding-top: 24px; padding-bottom: 12px; row-gap: 10px; }
+  .calendar-hint { margin: 10px 2px 16px; font-size: 11px; }
+  .calendar-week { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 8px 14px; overflow: hidden; }
+  .calendar-week .week-day { display: grid; grid-template-columns: 52px minmax(0,1fr); gap: 12px; align-items: start; padding: 4px 0; margin: 0; border: none; border-radius: 0; background: transparent; }
+  .calendar-week .week-day + .week-day { border-top: 1px solid var(--border); }
+  .week-day-label { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; gap: 1px; padding: 4px 0; }
+  .week-day-label span { font-size: 10px; font-weight: 550; color: var(--text-secondary); }
+  .week-day-label strong { font-size: 17px; font-weight: 650; line-height: 1.2; }
+  .week-day[data-today="true"] .week-day-label { background: var(--accent-soft); color: var(--accent); }
+  .week-events { min-width: 0; }
+  .week-events .calendar-empty-day { display: flex; align-items: center; min-height: 44px; margin: 0; font-size: 12px; color: var(--text-muted); }
+  .calendar-event.event-dense { grid-template-columns: 44px minmax(0,1fr); gap: 4px; border: none; border-radius: 0; background: transparent; padding: 0; margin: 0; }
+  .event-dense + .event-dense { margin-top: 4px; }
+  .event-dense .event-title-button { padding: 2px 0; min-height: 24px; font-size: 13px; font-weight: 550; line-height: 1.35; }
+  .event-dense .event-meta { font-size: 10px; line-height: 1.35; margin-top: 2px; }
+  .calendar-event:not(.event-compact):not(.event-dense) { padding-top: 8px; padding-bottom: 8px; margin-top: 8px; margin-bottom: 8px; }
+  .task-surface { padding-top: 6px; padding-bottom: 6px; }
+  @media (max-width: 359px) {
+    .class-card-header { padding-left: 24px; padding-right: 16px; }
+    .class-symbol { display: flex !important; }
+    .focus-card { padding: 18px 22px; }
+    .calendar-week { padding-left: 10px; padding-right: 10px; }
+    .calendar-week .week-day { grid-template-columns: 44px minmax(0,1fr); gap: 8px; }
+  }
+
+
+  /* Coordinated color themes; light/dark appearance is chosen separately. */
+  :root[data-palette="lilac"]:not([data-theme="dark"]) { --accent: #7772CE; --accent-soft: #EEEDF9; --bg: #FAFAF8; --surface: #FFFFFF; --surface-raised: #FFFFFF; --accent-glow: #7772CE40; --on-accent: #FFFFFF; }
+  :root[data-palette="lilac"][data-theme="dark"] { --accent: #B9B3FF; --accent-soft: #2B2940; --bg: #171715; --surface: #201F1D; --surface-raised: #262523; --accent-glow: #B9B3FF30; --on-accent: #1C1C1A; }
+  :root[data-palette="sage"]:not([data-theme="dark"]) { --accent: #507660; --accent-soft: #E7F1E9; --bg: #F7FAF7; --surface: #FFFFFF; --surface-raised: #FFFFFF; --accent-glow: #50766040; --on-accent: #FFFFFF; }
+  :root[data-palette="sage"][data-theme="dark"] { --accent: #A9D3B5; --accent-soft: #273A2E; --bg: #171D19; --surface: #202923; --surface-raised: #27312A; --accent-glow: #A9D3B530; --on-accent: #1C1C1A; }
+  :root[data-palette="ocean"]:not([data-theme="dark"]) { --accent: #496F92; --accent-soft: #E6EFF8; --bg: #F7FAFC; --surface: #FFFFFF; --surface-raised: #FFFFFF; --accent-glow: #496F9240; --on-accent: #FFFFFF; }
+  :root[data-palette="ocean"][data-theme="dark"] { --accent: #A8CCE9; --accent-soft: #263A4C; --bg: #161C22; --surface: #202931; --surface-raised: #27323C; --accent-glow: #A8CCE930; --on-accent: #1C1C1A; }
+  :root[data-palette="rose"]:not([data-theme="dark"]) { --accent: #A05D79; --accent-soft: #F6E9EF; --bg: #FCF8FA; --surface: #FFFFFF; --surface-raised: #FFFFFF; --accent-glow: #A05D7940; --on-accent: #FFFFFF; }
+  :root[data-palette="rose"][data-theme="dark"] { --accent: #E9B0C8; --accent-soft: #3C2934; --bg: #20191D; --surface: #2B2227; --surface-raised: #34292F; --accent-glow: #E9B0C830; --on-accent: #1C1C1A; }
+  :root[data-palette="peach"]:not([data-theme="dark"]) { --accent: #99623F; --accent-soft: #F8EDDF; --bg: #FCF9F5; --surface: #FFFFFF; --surface-raised: #FFFFFF; --accent-glow: #99623F40; --on-accent: #FFFFFF; }
+  :root[data-palette="peach"][data-theme="dark"] { --accent: #ECC49B; --accent-soft: #3C3024; --bg: #201B17; --surface: #2A241E; --surface-raised: #332C24; --accent-glow: #ECC49B30; --on-accent: #1C1C1A; }
+  :root[data-palette="slate"]:not([data-theme="dark"]) { --accent: #606F88; --accent-soft: #E9EDF5; --bg: #F8F9FB; --surface: #FFFFFF; --surface-raised: #FFFFFF; --accent-glow: #606F8840; --on-accent: #FFFFFF; }
+  :root[data-palette="slate"][data-theme="dark"] { --accent: #B7C7E2; --accent-soft: #2D3545; --bg: #191C22; --surface: #232831; --surface-raised: #2B313C; --accent-glow: #B7C7E230; --on-accent: #1C1C1A; }
+
+  :root { --accent-glow: #7772CE40; --on-accent: #FFFFFF; }
+  :root[data-theme="dark"] { --on-accent: #1C1C1A; }
+  body { transition: background-color .22s ease, color .22s ease; }
+  .theme-section { margin: 0 0 26px; }
+  .theme-section h2 { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 12px; }
+  .theme-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .theme-option { overflow: hidden; background-clip: border-box; display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 62px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text-primary); text-align: left; cursor: pointer; }
+  .theme-option[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .theme-swatch { display: block; flex: 0 0 34px; width: 34px; height: 34px; border-radius: var(--radius-iphone); border: 0; overflow: hidden; background-color: var(--swatch-light-soft); background-image: linear-gradient(135deg,var(--swatch-light-soft) 0%,var(--swatch-light-accent) 100%); background-origin: border-box; background-clip: border-box; }
+  [data-theme="dark"] .theme-swatch { background-color: var(--swatch-dark-soft); background-image: linear-gradient(135deg,var(--swatch-dark-soft) 0%,var(--swatch-dark-accent) 100%); }
+  .theme-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; }
+  .theme-selected { display: flex; width: 14px; flex: 0 0 14px; color: var(--accent); }
+  .theme-note { color: var(--text-secondary); font-size: 12px; line-height: 1.5; margin: 10px 4px 0; }
+  @media (max-width: 359px) { .theme-option { gap: 8px; padding-left: 10px; padding-right: 10px; } .theme-swatch { width: 28px; height: 28px; flex-basis: 28px; } }
+
+
+  /* Inset, consistent chevrons instead of arrows against the pill's edge. */
+  select {
+    -webkit-appearance: none; appearance: none;
+    padding-right: 44px !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239B9BA5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important; background-position: right 18px center !important; background-size: 14px 14px !important;
+  }
+  select option { background: var(--surface); color: var(--text-primary); }
+  .native-date { padding-left: 16px !important; padding-right: 16px !important; }
+  .native-date input::-webkit-calendar-picker-indicator { margin-right: 4px; padding: 4px; opacity: .8; }
+  .quick-add .native-date { padding-left: 8px !important; padding-right: 8px !important; }
+  .quick-repeat { grid-column: 1 / -1; grid-row: 3; min-width: 0; border-top: 1px solid var(--border); padding: 0 8px; margin-top: 2px; }
+  .compact-repeat .field-label { display: grid; grid-template-columns: 58px minmax(0,1fr); gap: 8px; align-items: center; margin: 0; font-size: 12px; font-weight: 500; }
+  .compact-repeat .field-label > select, .compact-repeat .field-label > input {
+    margin: 0; min-height: 44px; padding: 6px 8px; border: none; background-color: transparent;
+    box-shadow: none !important; border-radius: 0; font-size: 16px;
+  }
+  .compact-repeat .field-label > select { background-position: right 10px center !important; padding-right: 32px !important; }
+  .compact-repeat .field-optional { display: none; }
+  .quick-repeat .editor-error { padding-top: 6px; font-size: 11px; }
+  .task-edit-hint { margin: -12px 4px 16px; color: var(--text-secondary); font-size: 11px; }
+  .task-card-list { display: flex; flex-direction: column; gap: 8px; }
+  .task-card { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--task-color); border-radius: var(--radius-card); padding: 4px 10px; overflow: hidden; box-shadow: var(--shadow); }
+  .task-card > button { padding-left: 12px !important; }
+  .task-card .task-row { border-bottom: none !important; -webkit-touch-callout: none; user-select: none; }
+  @media (forced-colors: active) { select { appearance: auto; background-image: none !important; } }
+
+
+  /* All tasks and calendar day now share one card, including press feedback. */
+  .task-card-list { display: block; }
+  .calendar-event { translate: var(--swipe-x, 0px) 0; transition: transform .16s ease, box-shadow .16s ease, opacity .2s ease, translate .2s ease; }
+  .calendar-event[data-swiping="true"] { transition: none; }
+  .undo-toast { width: min(360px, calc(100vw - 48px)); }
+  .undo-toast-content { display: grid; grid-template-columns: minmax(0,1fr) auto 44px; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: var(--radius-iphone); background: var(--surface-raised); box-shadow: var(--shadow-lift); backdrop-filter: blur(20px); }
+  .undo-toast-content[data-has-icon="true"] { grid-template-columns: 20px minmax(0,1fr) auto 44px; }
+  .undo-message { font-size: 13.5px; line-height: 1.4; font-weight: 500; color: var(--text-primary); min-width: 0; overflow-wrap: anywhere; }
+  .undo-action, .undo-close { border: none; background: none; cursor: pointer; border-radius: var(--radius-control); min-height: 44px; }
+  .undo-action { color: var(--text-primary); font-size: 13.5px; font-weight: 700; padding: 6px 10px; }
+  .undo-toast .undo-close { width: 44px; height: 44px; padding: 0; display: grid; place-items: center; align-self: center; justify-self: center; line-height: 0; color: var(--text-muted); }
+  .undo-close svg { display: block; }
+  .undo-toast[data-exiting="true"] { animation: toastDrop .22s cubic-bezier(.4,0,1,1) both !important; pointer-events: none; }
+  @keyframes toastRise { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes toastDrop { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(24px); } }
+  @media (prefers-reduced-motion: reduce) { .undo-toast[data-exiting="true"] { animation-duration: .001ms !important; } }
+
+
+  /* Alignment and finishing motion: short, compositor-friendly, and never looping. */
+  button > svg, .event-check-target input { flex-shrink: 0; }
+  .segmented-control > button { display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.3; }
+  .nav-track > button { align-items: center; justify-content: center; text-align: center; }
+  .nav-track > button > svg { display: block; }
+  .event-check-target, .event-edit { align-self: center; justify-self: center; }
+  .event-edit, .quiet-icon, .task-delete { align-items: center; justify-content: center; line-height: 1; }
+  .event-copy { align-self: center; }
+  .class-add-action { justify-content: center !important; text-align: center; min-height: 48px; }
+  .class-card-actions > button { align-items: center; }
+  .theme-option { align-items: center; }
+  .theme-selected { align-items: center; justify-content: center; }
+  .theme-swatch { transition: transform .3s var(--ease-out); }
+  .theme-option[aria-pressed="true"] .theme-swatch { transform: scale(1.06); }
+  .theme-option[aria-pressed="true"] .theme-selected svg { animation: checkPop .32s var(--ease-out); }
+  .calendar-agenda > .calendar-event, .task-card-list > .calendar-event { animation: eventReveal .3s var(--ease-out) backwards; }
+  .calendar-agenda > .calendar-event:nth-child(2), .task-card-list > .calendar-event:nth-child(2) { animation-delay: 25ms; }
+  .calendar-agenda > .calendar-event:nth-child(3), .task-card-list > .calendar-event:nth-child(3) { animation-delay: 50ms; }
+  .calendar-agenda > .calendar-event:nth-child(4), .task-card-list > .calendar-event:nth-child(4) { animation-delay: 75ms; }
+  .calendar-agenda > .calendar-event:nth-child(5), .task-card-list > .calendar-event:nth-child(5) { animation-delay: 100ms; }
+  .calendar-agenda > .calendar-event:nth-child(6), .task-card-list > .calendar-event:nth-child(6) { animation-delay: 125ms; }
+  @keyframes eventReveal { from { opacity: 0; scale: .985; } to { opacity: 1; scale: 1; } }
+  .calendar-event[data-done="true"] .event-check-target input { animation: checkPop .32s var(--ease-out); }
+  .calendar-week, .calendar-month { animation: calendarReveal .28s var(--ease-out) backwards; }
+  @keyframes calendarReveal { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+  .focus-emblem[data-complete="true"] { animation: emblemCelebrate .5s var(--ease-out); }
+  @keyframes emblemCelebrate { 0% { transform: rotate(-8deg) scale(.9); } 45% { transform: rotate(5deg) scale(1.1); } 100% { transform: rotate(-8deg) scale(1); } }
+  @media (hover: hover) and (pointer: fine) {
+    .event-edit:hover, .quiet-icon:hover { background-color: var(--accent-soft); color: var(--accent); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .calendar-agenda > .calendar-event, .task-card-list > .calendar-event, .calendar-week, .calendar-month,
+    .focus-emblem[data-complete="true"], .calendar-event[data-done="true"] .event-check-target input,
+    .theme-option[aria-pressed="true"] .theme-selected svg { animation: none !important; }
+    .theme-swatch { transition: none; }
+  }
+
+
+  .rounded-select { min-width: 0; font-size: 15px; font-weight: 500; color: var(--text-primary); }
+  .field-label > .rounded-select { margin-top: 9px; }
+  .rounded-select summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 48px; padding: 12px 20px; border: 1px solid var(--border-strong); border-radius: var(--radius-iphone); background: var(--bg); cursor: pointer; }
+  .rounded-select summary::-webkit-details-marker { display: none; }
+  .rounded-select summary span { min-width: 0; overflow-wrap: anywhere; }
+  .rounded-select summary svg { flex-shrink: 0; transition: transform .2s ease; }
+  .rounded-select[open] summary svg { transform: rotate(180deg); }
+  .rounded-select summary[aria-disabled="true"] { opacity: .5; cursor: default; }
+  .rounded-select-menu { margin-top: 8px; padding: 12px; border-radius: var(--radius-iphone); border: 1px solid var(--border); background: var(--surface-raised); box-shadow: var(--shadow-lift); max-height: 260px; overflow-y: auto; animation: fadeIn .16s ease; }
+  .rounded-select-menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 12px 18px; min-height: 44px; border: 0; border-radius: var(--radius-iphone); background: transparent; color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
+  .rounded-select-menu button[aria-pressed="true"], .rounded-select-menu button:hover { background: var(--accent-soft); color: var(--accent); }
+  .custom-repeat-panel { padding: 16px; margin: 0 0 14px; border: 1px solid var(--border); border-radius: var(--radius-iphone); background: var(--bg); }
+  .repeat-weekdays { border: 0; padding: 0; margin: 0 0 12px; min-width: 0; }
+  .repeat-weekdays legend { font-size: 12px; font-weight: 650; color: var(--text-secondary); margin-bottom: 10px; }
+  .repeat-weekdays > div { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 4px; }
+  .repeat-weekdays button { min-width: 0; min-height: 44px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-iphone); background: var(--surface); color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer; }
+  .repeat-weekdays button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+  .repeat-weekdays:disabled { opacity: .5; }
+  .custom-repeat-panel .editor-hint { margin-bottom: 0; }
+  .quick-repeat .rounded-select { width: 100%; }
+  .quick-repeat .field-label { display: block; }
+
+  /* Shared form spacing keeps labels, controls, and actions on a consistent inset. */
+  .quick-add { padding: 16px !important; column-gap: 12px !important; }
+  .quick-add > input, .quick-add > input:not([type="checkbox"]):not([type="radio"]):focus { padding-left: 0; }
+  .quick-add-submit { justify-self: center; align-self: center; }
+  .quick-add-submit svg { width: 16px; height: 16px; }
+  .quick-add > .date-control { padding: 8px 0 0; margin-top: 10px; }
+  .quick-add .native-date { padding-left: 0 !important; padding-right: 0 !important; }
+  .quick-repeat { padding: 14px 0 0; margin-top: 10px; }
+  .repeat-fields { display: grid; gap: 16px; min-width: 0; margin-bottom: 16px; }
+  .repeat-fields > .field-label { margin: 0; }
+  .field-label > .rounded-select, .field-label > input, .field-label > select { margin-top: 8px; }
+  .rounded-select summary { padding-left: 18px; padding-right: 18px; line-height: 1.5; }
+  .custom-repeat-panel { display: grid; gap: 16px; padding: 18px; margin: 0; }
+  .custom-repeat-panel .field-label { display: block; margin: 0; line-height: 1.5; }
+  .custom-repeat-panel .field-label > span { display: block; padding-left: 18px; }
+  .custom-repeat-panel .repeat-weekdays { margin: 0; }
+  .custom-repeat-panel .repeat-weekdays legend { padding-left: 18px; }
+  .custom-repeat-panel .editor-hint { margin: 0; padding: 0 4px; }
+  .compact-repeat .field-label { font-size: 12px; font-weight: 650; line-height: 1.5; }
+  .compact-repeat .field-label > input { margin-top: 8px; min-height: 48px; padding: 12px 18px; border: 1px solid var(--border-strong); border-radius: var(--radius-iphone); background: var(--bg); }
+  .quick-repeat .repeat-fields { margin-bottom: 0; }
+  .rounded-select-menu { scroll-padding: 12px; }
+  .rounded-select-menu button { line-height: 1.5; }
+  @media (max-width: 639px), (max-width: 956px) and (max-height: 500px) {
+    .sheet-fields > .rounded-select { flex-basis: 100% !important; width: 100%; }
+  }
+
+
+  .event-time-fields { display: grid; gap: 10px; margin: 0 0 18px; min-width: 0; }
+  .event-time-fields .field-label { margin: 0; display: block; }
+  .notify-toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px; font-size: 13px; font-weight: 550; color: var(--text-primary); cursor: pointer; }
+  .notify-toggle input { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); flex-shrink: 0; }
+  .notify-toggle:has(input:disabled) { opacity: .5; cursor: default; }
+  .event-time-fields .editor-hint { margin: 0; padding: 0 4px; }
+  .clear-event-time { justify-self: start; min-height: 44px; padding: 0 12px; border: 0; border-radius: var(--radius-iphone); background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; }
+  .event-time { display: block; font-size: 11px; font-weight: 650; color: var(--text-secondary); margin-bottom: 2px; }
+  .event-reminder { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; margin: 0 auto; width: min(420px, calc(100% - 32px)); z-index: 90; display: grid; grid-template-columns: 24px minmax(0,1fr) 44px; align-items: center; gap: 12px; padding: 18px; border: 1px solid var(--border-strong); border-radius: var(--radius-iphone); background: var(--surface-raised); color: var(--accent); box-shadow: var(--shadow-lift); animation: fadeIn .2s ease; }
+  .event-reminder strong { display: block; font-size: 15px; line-height: 1.4; color: var(--text-primary); overflow-wrap: anywhere; }
+  .reminder-heading { display: block; color: var(--text-secondary); font-size: 11px; line-height: 1.5; margin-bottom: 4px; }
+
+  .event-time-picker { margin-top: 8px; }
+  .time-picker-panel { border: 1px solid var(--border); border-radius: var(--radius-iphone); padding: 18px; margin-top: 8px; background: var(--surface-raised); box-shadow: var(--shadow-lift); animation: fadeIn .16s ease; }
+  .time-picker-columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .time-picker-column { min-width: 0; }
+  .time-picker-column > span { display: block; text-align: center; font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; }
+  .time-wheel-frame { position: relative; height: 220px; border-radius: var(--radius-iphone); overflow: hidden; background: var(--bg); }
+  .time-wheel-band { position: absolute; top: 88px; left: 2px; right: 2px; height: 44px; border-radius: var(--radius-iphone); background: var(--accent-soft); pointer-events: none; }
+  .time-wheel { position: relative; height: 220px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-snap-type: y mandatory; padding: 88px 0; touch-action: pan-y; -webkit-overflow-scrolling: touch; mask-image: linear-gradient(transparent,black 35%,black 65%,transparent); }
+  .time-wheel::-webkit-scrollbar { display: none; }
+  .time-wheel:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; border-radius: var(--radius-iphone); }
+  .time-wheel-option { height: 44px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; color: var(--text-muted); font-size: 19px; line-height: 1; font-weight: 500; cursor: pointer; user-select: none; transition: color .12s ease, scale .12s ease; }
+  .time-wheel-option[aria-selected="true"] { color: var(--accent); font-weight: 700; scale: 1.08; }
+  .time-picker-panel > button { margin-top: 14px; }
+  .notify-toggle input { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border: 1.5px solid var(--border-strong); border-radius: 8px; background: var(--bg); display: grid; place-content: center; transition: background .18s ease, border-color .18s ease; cursor: inherit; }
+  .notify-toggle input::before { content: ""; width: 6px; height: 11px; border: solid var(--on-accent); border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg) scale(0); transition: transform .18s ease; }
+  .notify-toggle input:checked { background: var(--accent); border-color: var(--accent); }
+  .notify-toggle input:checked::before { transform: translateY(-1px) rotate(45deg) scale(1); }
+  @media (prefers-reduced-motion: reduce) { .notify-toggle input, .notify-toggle input::before { transition: none; } }
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
@@ -137,6 +708,119 @@ const STORAGE_KEY = "classesApp.v1";
 
 const DEFAULT_CLASSES = [];
 
+const COLOR_THEMES = [
+  {
+    "key": "lilac",
+    "name": "Lilac",
+    "light": [
+      "#7772CE",
+      "#EEEDF9",
+      "#FAFAF8",
+      "#FFFFFF",
+      "#FFFFFF"
+    ],
+    "dark": [
+      "#B9B3FF",
+      "#2B2940",
+      "#171715",
+      "#201F1D",
+      "#262523"
+    ]
+  },
+  {
+    "key": "sage",
+    "name": "Sage",
+    "light": [
+      "#507660",
+      "#E7F1E9",
+      "#F7FAF7",
+      "#FFFFFF",
+      "#FFFFFF"
+    ],
+    "dark": [
+      "#A9D3B5",
+      "#273A2E",
+      "#171D19",
+      "#202923",
+      "#27312A"
+    ]
+  },
+  {
+    "key": "ocean",
+    "name": "Ocean",
+    "light": [
+      "#496F92",
+      "#E6EFF8",
+      "#F7FAFC",
+      "#FFFFFF",
+      "#FFFFFF"
+    ],
+    "dark": [
+      "#A8CCE9",
+      "#263A4C",
+      "#161C22",
+      "#202931",
+      "#27323C"
+    ]
+  },
+  {
+    "key": "rose",
+    "name": "Rose",
+    "light": [
+      "#A05D79",
+      "#F6E9EF",
+      "#FCF8FA",
+      "#FFFFFF",
+      "#FFFFFF"
+    ],
+    "dark": [
+      "#E9B0C8",
+      "#3C2934",
+      "#20191D",
+      "#2B2227",
+      "#34292F"
+    ]
+  },
+  {
+    "key": "peach",
+    "name": "Peach",
+    "light": [
+      "#99623F",
+      "#F8EDDF",
+      "#FCF9F5",
+      "#FFFFFF",
+      "#FFFFFF"
+    ],
+    "dark": [
+      "#ECC49B",
+      "#3C3024",
+      "#201B17",
+      "#2A241E",
+      "#332C24"
+    ]
+  },
+  {
+    "key": "slate",
+    "name": "Slate",
+    "light": [
+      "#606F88",
+      "#E9EDF5",
+      "#F8F9FB",
+      "#FFFFFF",
+      "#FFFFFF"
+    ],
+    "dark": [
+      "#B7C7E2",
+      "#2D3545",
+      "#191C22",
+      "#232831",
+      "#2B313C"
+    ]
+  }
+];
+
+
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -146,6 +830,7 @@ function loadState() {
     classes: DEFAULT_CLASSES,
     tasks: [],
     theme: "system",
+    colorTheme: "lilac",
   };
 }
 
@@ -281,6 +966,7 @@ function Icon({ name, size = 20, style }) {
     plus: <path d="M12 5v14M5 12h14" />,
     check: <path d="M20 6L9 17l-5-5" />,
     chevron: <path d="M9 6l6 6-6 6" />,
+    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
     settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.14.36.4.66.73.86.24.14.5.22.78.24H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></>,
     list: <><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><circle cx="3.5" cy="6" r="1.5" fill="currentColor" stroke="none" /><circle cx="3.5" cy="12" r="1.5" fill="currentColor" stroke="none" /><circle cx="3.5" cy="18" r="1.5" fill="currentColor" stroke="none" /></>,
     grid: <><rect x="3" y="3" width="7" height="7" rx="2" /><rect x="14" y="3" width="7" height="7" rx="2" /><rect x="3" y="14" width="7" height="7" rx="2" /><rect x="14" y="14" width="7" height="7" rx="2" /></>,
@@ -289,6 +975,7 @@ function Icon({ name, size = 20, style }) {
     x: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>,
     sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
     moon: <path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z" />,
+    edit: <><path d="M16 3l5 5L8 21H3v-5z"/><path d="M14 5l5 5"/></>,
     monitor: <><rect x="2" y="4" width="20" height="13" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></>,
     arrowLeft: <path d="M19 12H5M12 19l-7-7 7-7" />,
     grip: <><circle cx="9" cy="6" r="1" fill="currentColor" stroke="none" /><circle cx="15" cy="6" r="1" fill="currentColor" stroke="none" /><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="9" cy="18" r="1" fill="currentColor" stroke="none" /><circle cx="15" cy="18" r="1" fill="currentColor" stroke="none" /></>,
@@ -312,13 +999,16 @@ function Icon({ name, size = 20, style }) {
 
 /* ---------- checkbox with completion animation ---------- */
 
-function TaskCheckbox({ checked, onToggle, color }) {
+function TaskCheckbox({ checked, onToggle, color, celebrating = false }) {
   return (
     <button
       onClick={onToggle}
       aria-label={checked ? "Mark task incomplete" : "Mark task complete"}
-      className="no-press"
+      className="no-press task-check"
+      data-celebrating={celebrating}
+      aria-pressed={checked}
       style={{
+        "--check-color": color || "var(--accent)",
         width: 26, height: 26, borderRadius: "50%",
         border: `2px solid ${checked ? color : "var(--border-strong)"}`,
         background: checked ? color : "transparent",
@@ -388,6 +1078,135 @@ function isOverdue(iso) {
 }
 
 /* ---------- streak calculation ---------- */
+
+const REPEAT_OPTIONS = [["none", "Does not repeat"], ["daily", "Every day"], ["weekdays", "Every weekday"], ["weekly", "Every week"], ["biweekly", "Every 2 weeks"], ["monthly", "Every month"], ["yearly", "Every year"]];
+function shiftISO(iso, days) {
+  const d = dateFromISO(iso); d.setDate(d.getDate() + days); return isoFromDate(d);
+}
+function validISO(iso) {
+  return typeof iso === "string" && /^\d{4}-\d{2}-\d{2}$/.test(iso) && Number.isFinite(dateFromISO(iso).getTime()) && isoFromDate(dateFromISO(iso)) === iso;
+}
+function customRepeat(repeat) {
+  const match = /^custom:(weekly|monthly):([1-9]|1[0-2]):([0-6](?:,[0-6])*):([1-4]|last)$/.exec(repeat || "");
+  return match ? { frequency: match[1], interval: Number(match[2]), days: [...new Set(match[3].split(",").map(Number))], ordinal: match[4] } : null;
+}
+function customRepeatValue(config) { return `custom:${config.frequency}:${config.interval}:${config.days.join(",")}:${config.ordinal}`; }
+function repeatLabel(repeat) {
+  const custom = customRepeat(repeat);
+  if (custom) {
+    const unit = custom.frequency === "weekly" ? "week" : "month";
+    const ordinal = custom.frequency === "monthly" ? `${custom.ordinal === "last" ? "Last" : ["","First","Second","Third","Fourth"][Number(custom.ordinal)]} ` : "";
+    return `Every ${custom.interval === 1 ? "" : custom.interval + " "}${unit}${custom.interval > 1 ? "s" : ""} · ${ordinal}${custom.days.map(d => ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d]).join(", ")}`;
+  }
+ return (REPEAT_OPTIONS.find(x => x[0] === repeat) || REPEAT_OPTIONS[0])[1]; }
+function isRepeating(record) { return (REPEAT_OPTIONS.some(x => x[0] !== "none" && x[0] === record.repeat) || !!customRepeat(record.repeat)) && validISO(record.dueDate); }
+function occurrenceDates(record, through) {
+  const result = [];
+  const start = dateFromISO(record.dueDate);
+  const end = validISO(record.repeatUntil) && record.repeatUntil < through ? record.repeatUntil : through;
+  const custom = customRepeat(record.repeat);
+  if (custom) {
+    // Use calendar-day arithmetic, so local daylight-saving changes cannot shift weekdays.
+    const dayNumber = d => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000;
+    const anchorWeek = dayNumber(start) - ((start.getDay() + 6) % 7);
+    for (let d = new Date(start); isoFromDate(d) <= end; d.setDate(d.getDate() + 1)) {
+      if (!custom.days.includes(d.getDay())) continue;
+      const period = custom.frequency === "weekly"
+        ? Math.floor((dayNumber(d) - anchorWeek) / 7)
+        : (d.getFullYear() - start.getFullYear()) * 12 + d.getMonth() - start.getMonth();
+      if (period % custom.interval !== 0) continue;
+      if (custom.frequency === "monthly") {
+        const ordinal = Math.floor((d.getDate() - 1) / 7) + 1;
+        const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+        if (custom.ordinal === "last" ? d.getDate() + 7 <= last : ordinal !== Number(custom.ordinal)) continue;
+      }
+      result.push(isoFromDate(d));
+    }
+    return result;
+  }
+  let n = 0;
+  while (true) {
+    let d = new Date(start);
+    if (record.repeat === "monthly" || record.repeat === "yearly") {
+      const month = start.getMonth() + (record.repeat === "yearly" ? n * 12 : n);
+      d = new Date(start.getFullYear(), month, 1);
+      d.setDate(Math.min(start.getDate(), new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+    } else {
+      d.setDate(start.getDate() + n * (record.repeat === "weekly" ? 7 : record.repeat === "biweekly" ? 14 : 1));
+    }
+    const iso = isoFromDate(d);
+    if (iso > end || !Number.isFinite(d.getTime())) break;
+    if (record.repeat !== "weekdays" || (d.getDay() !== 0 && d.getDay() !== 6)) result.push(iso);
+    n++;
+  }
+  return result;
+}
+function validEventTime(time) { return typeof time === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(time); }
+function formatEventTime(time) {
+  if (!validEventTime(time)) return "";
+  const [hours, minutes] = time.split(":").map(Number);
+  return new Date(2000,0,1,hours,minutes).toLocaleTimeString(undefined, {hour:"numeric",minute:"2-digit"});
+}
+function dueReminders(records, now) {
+  const today = isoFromDate(now);
+  return expandTasks(records, today).filter(task => {
+    if (!task.notify || task.done || task.deleted || task.dueDate !== today || !validEventTime(task.time)) return false;
+    const [hours, minutes] = task.time.split(":").map(Number);
+    const scheduled = dateFromISO(today); scheduled.setHours(hours, minutes, 0, 0);
+    return scheduled.getTime() <= now.getTime();
+  }).sort((a,b) => a.time.localeCompare(b.time));
+}
+function reminderKey(task) { return `${task.id}|${task.dueDate}|${task.time}`; }
+function makeOccurrence(record, date) {
+  const { instances, ...base } = record;
+  const patch = (instances || {})[date] || {};
+  return { ...base, dueDate: date, done: false, completedAt: null, ...patch,
+    id: `${record.id}::${date}`, seriesId: record.id, occurrenceDate: date, seriesStart: record.dueDate };
+}
+function expandTasks(records, through) {
+  const result = [];
+  records.forEach(record => {
+    if (!isRepeating(record)) { result.push(record); return; }
+    const firstWindow = customRepeat(record.repeat) ? (occurrenceDates(record, shiftISO(record.dueDate, 400))[0] || record.dueDate) : record.repeat === "weekdays" ? shiftISO(record.dueDate, 3) : record.dueDate;
+    const dates = new Set(occurrenceDates(record, through > firstWindow ? through : firstWindow));
+    // Keep moved and historical occurrences addressable even outside the generated window.
+    Object.keys(record.instances || {}).forEach(date => {
+      const patch = record.instances[date];
+      if (validISO(date) && (patch.done || (!record.repeatUntil || date <= record.repeatUntil))) dates.add(date);
+    });
+    dates.forEach(date => {
+      const task = makeOccurrence(record, date);
+      if (!task.deleted) result.push(task);
+    });
+  });
+  return result;
+}
+function resolveTask(records, id) {
+  const [recordId, occurrenceDate] = id.split("::");
+  const record = records.find(t => t.id === recordId);
+  if (!record) return null;
+  return occurrenceDate && isRepeating(record) ? makeOccurrence(record, occurrenceDate) : record;
+}
+function patchTask(records, id, patch) {
+  const [recordId, occurrenceDate] = id.split("::");
+  return records.map(record => {
+    if (record.id !== recordId) return record;
+    if (occurrenceDate && isRepeating(record)) return { ...record, instances: { ...record.instances, [occurrenceDate]: { ...(record.instances || {})[occurrenceDate], ...patch } } };
+    return { ...record, ...patch };
+  });
+}
+function editTaskRecords(records, task, changes, scope) {
+  if (task.seriesId && scope === "occurrence") {
+    return patchTask(records, task.id, { title: changes.title, classId: changes.classId, dueDate: changes.dueDate, ...(changes.time !== undefined ? { time: changes.time } : {}), ...(typeof changes.notify === "boolean" ? { notify: changes.notify } : {}) });
+  }
+  return records.map(record => {
+    if (record.id !== (task.seriesId || task.id)) return record;
+    let instances = record.instances || {};
+    if (!isRepeating(record) && changes.repeat !== "none" && record.done) instances = { [changes.dueDate]: { done: true, completedAt: record.completedAt } };
+    if (changes.repeat === "none") instances = {};
+    return { ...record, ...changes, instances, done: changes.repeat !== "none" ? false : record.done };
+  });
+}
 
 function computeStreak(tasks) {
   // A day "passes" if every task due that day was completed on or before that day.
@@ -507,7 +1326,7 @@ function MiniCalendarPopover({ value, onSelect, onClose, anchorRect }) {
       style={{
         position: "fixed", top, left, zIndex: 9999,
         background: "var(--surface-raised)", border: "1px solid var(--border)",
-        borderRadius: 14, boxShadow: "var(--shadow-lift)", padding: 12,
+        borderRadius: "var(--radius-iphone)", boxShadow: "var(--shadow-lift)", padding: 12,
         width: POP_WIDTH,
         animation: "popIn 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)",
       }}
@@ -515,14 +1334,14 @@ function MiniCalendarPopover({ value, onSelect, onClose, anchorRect }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <button type="button" onClick={() => goMonth(-1)} style={{
           background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)",
-          padding: 4, display: "flex", borderRadius: 6,
+          padding: 4, display: "flex", borderRadius: "var(--radius-iphone)",
         }}>
           <Icon name="chevron" size={14} style={{ transform: "rotate(180deg)" }} />
         </button>
         <div style={{ fontSize: 12.5, fontWeight: 600 }}>{monthLabel}</div>
         <button type="button" onClick={() => goMonth(1)} style={{
           background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)",
-          padding: 4, display: "flex", borderRadius: 6,
+          padding: 4, display: "flex", borderRadius: "var(--radius-iphone)",
         }}>
           <Icon name="chevron" size={14} />
         </button>
@@ -545,7 +1364,7 @@ function MiniCalendarPopover({ value, onSelect, onClose, anchorRect }) {
               onClick={() => { onSelect(iso); onClose(); }}
               style={{
                 aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
-                borderRadius: 7, border: "none", cursor: "pointer", fontSize: 11.5,
+                borderRadius: "var(--radius-iphone)", border: "none", cursor: "pointer", fontSize: 11.5,
                 background: isSelected ? "var(--text-primary)" : (isToday ? "var(--bg)" : "transparent"),
                 color: isSelected ? "var(--bg)" : "var(--text-primary)",
                 fontWeight: isToday || isSelected ? 700 : 500,
@@ -575,15 +1394,20 @@ function DatePickerButton({ value, onChange }) {
   };
 
   return (
-    <div style={{ position: "relative", flexShrink: 0 }}>
+    <div className="date-control" style={{ position: "relative", flexShrink: 0 }}>
+      <label className="native-date" style={{ background: "var(--bg)", border: "1px solid var(--border-strong)", borderRadius: "var(--radius-iphone)", padding: "0 8px", color: "var(--text-secondary)" }}>
+        <Icon name="calendar" size={16} />
+        <input type="date" aria-label="Due date" value={value || ""} onChange={e => onChange(e.target.value)} />
+      </label>
       <button
         ref={btnRef}
+        className="custom-date"
         type="button"
         onClick={handleToggle}
         style={{
           display: "flex", alignItems: "center", gap: 5,
           background: "var(--bg)", border: "1.5px solid var(--border-strong)",
-          borderRadius: 8, padding: "6px 9px", cursor: "pointer",
+          borderRadius: "var(--radius-iphone)", padding: "6px 9px", cursor: "pointer",
           fontSize: 12, fontWeight: 600, color: "var(--text-secondary)",
           whiteSpace: "nowrap",
         }}
@@ -600,14 +1424,26 @@ function DatePickerButton({ value, onChange }) {
 
 const SWIPE_THRESHOLD = 72;
 
+let lastHapticAt = 0;
 function vibrate(pattern) {
   try {
-    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(pattern);
+    if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const now = performance.now();
+    if (now - lastHapticAt < 45) return;
+    lastHapticAt = now;
+    navigator.vibrate(pattern);
   } catch (e) {}
 }
 
-function TaskRow({ task, color, onToggle, onDelete }) {
+function TaskRow({ task, color, onToggle, onDelete, onEdit }) {
   const [leaving, setLeaving] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const actionTimer = useRef(null);
+  const leaveTimer = useRef(null);
+  // Let the data action finish even if navigation unmounts this row mid-animation.
+  useEffect(() => () => { clearTimeout(leaveTimer.current); }, []);
+  useEffect(() => { setLeaving(false); setCompleting(false); toggling.current = false; }, [task.done]);
   const [height, setHeight] = useState(null);
   const ref = useRef(null);
   const toggling = useRef(false);
@@ -618,15 +1454,37 @@ function TaskRow({ task, color, onToggle, onDelete }) {
   const startY = useRef(0);
   const axisLocked = useRef(null); // 'x' | 'y' | null
   const firedHaptic = useRef(false);
+  const holdTimer = useRef(null);
+  const holdPoint = useRef(null);
+  useEffect(() => () => clearTimeout(holdTimer.current), []);
+  const cancelHold = () => { clearTimeout(holdTimer.current); holdPoint.current = null; };
+  const beginHold = e => {
+    cancelHold();
+    if (!onEdit || leaving || completing || e.button !== 0 || e.target.closest("button,input,label,select,a")) return;
+    holdPoint.current = { x: e.clientX, y: e.clientY };
+    holdTimer.current = setTimeout(() => {
+      holdPoint.current = null;
+      setDragging(false); setDragX(0); axisLocked.current = null;
+      vibrate(15); onEdit(task);
+    }, 500);
+  };
+  const moveHold = e => {
+    if (holdPoint.current && Math.hypot(e.clientX - holdPoint.current.x, e.clientY - holdPoint.current.y) > 8) cancelHold();
+  };
+
 
   const handleToggle = () => {
     if (!task.done) {
       if (toggling.current) return;
       toggling.current = true;
-      setLeaving(true);
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      setCompleting(true);
       vibrate(12);
       if (ref.current) setHeight(ref.current.offsetHeight);
-      setTimeout(() => { onToggle(task.id); toggling.current = false; }, 320);
+      leaveTimer.current = setTimeout(() => setLeaving(true), reduced ? 0 : 180);
+      const bounds = ref.current?.getBoundingClientRect();
+      const origin = bounds ? { x: bounds.left + 26, y: bounds.top + bounds.height / 2 } : null;
+      actionTimer.current = setTimeout(() => { onToggle(task.id, origin); toggling.current = false; }, reduced ? 0 : 460);
     } else {
       onToggle(task.id);
     }
@@ -636,7 +1494,7 @@ function TaskRow({ task, color, onToggle, onDelete }) {
     vibrate([10, 30, 10]);
     if (ref.current) setHeight(ref.current.offsetHeight);
     setLeaving(true);
-    setTimeout(() => onDelete(task.id), 260);
+    actionTimer.current = setTimeout(() => onDelete(task.id), window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 260);
   };
 
   const onTouchStart = (e) => {
@@ -690,12 +1548,12 @@ function TaskRow({ task, color, onToggle, onDelete }) {
   };
 
   const overdue = !task.done && isOverdue(task.dueDate);
-  const dueLabel = formatDueLabel(task.dueDate);
+  const dueLabel = `${formatDueLabel(task.dueDate)}${validEventTime(task.time) ? ` · ${formatEventTime(task.time)}` : ""}`;
 
   const swipeProgress = Math.max(-1, Math.min(1, dragX / SWIPE_THRESHOLD));
 
   return (
-    <div style={{ position: "relative", overflow: "hidden" }}>
+    <div className="task-enter" style={{ position: "relative", overflow: "hidden" }}>
       {dragX !== 0 && (
         <div style={{
           position: "absolute", inset: 0,
@@ -705,7 +1563,7 @@ function TaskRow({ task, color, onToggle, onDelete }) {
           background: swipeProgress > 0
             ? `rgba(95,174,140,${0.12 + Math.abs(swipeProgress) * 0.18})`
             : `rgba(193,91,91,${0.12 + Math.abs(swipeProgress) * 0.18})`,
-          borderRadius: 10,
+          borderRadius: "var(--radius-iphone)",
         }}>
           <Icon
             name={swipeProgress > 0 ? "check" : "trash"}
@@ -721,6 +1579,13 @@ function TaskRow({ task, color, onToggle, onDelete }) {
       )}
       <div
         ref={ref}
+        className="task-row" data-leaving={leaving} data-completing={completing}
+        onPointerDown={beginHold}
+        onPointerMove={moveHold}
+        onPointerUp={cancelHold}
+        onPointerCancel={cancelHold}
+        onPointerLeave={cancelHold}
+        onContextMenu={e => { if (onEdit) e.preventDefault(); }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -744,8 +1609,8 @@ function TaskRow({ task, color, onToggle, onDelete }) {
           touchAction: "pan-y",
         }}
       >
-        <TaskCheckbox checked={task.done} onToggle={handleToggle} color={color} />
-        <span style={{
+        <TaskCheckbox checked={task.done || completing} celebrating={completing} onToggle={handleToggle} color={color} />
+        <span className="task-title" style={{
           flex: 1, fontSize: 15.5, lineHeight: 1.4,
           color: task.done ? "var(--text-muted)" : "var(--text-primary)",
           textDecoration: task.done ? "line-through" : "none",
@@ -753,11 +1618,12 @@ function TaskRow({ task, color, onToggle, onDelete }) {
           wordBreak: "break-word",
         }}>
           {task.title}
+          {isRepeating(task) && <small className="repeat-badge">↻ {repeatLabel(task.repeat)}</small>}
         </span>
         {dueLabel && !task.done && (
-          <span style={{
+          <span className="task-due" style={{
             fontSize: 12, fontWeight: 600, flexShrink: 0,
-            padding: "3px 8px", borderRadius: 8,
+            padding: "3px 8px", borderRadius: "var(--radius-iphone)",
             color: overdue ? "#C15B5B" : "var(--text-secondary)",
             background: overdue ? "#C15B5B18" : "var(--bg)",
             border: overdue ? "none" : "1px solid var(--border)",
@@ -767,18 +1633,19 @@ function TaskRow({ task, color, onToggle, onDelete }) {
           </span>
         )}
         <button
-          onClick={() => onDelete(task.id)}
-          aria-label="Delete task"
+          onClick={() => onEdit ? onEdit(task) : onDelete(task.id)}
+          aria-label={onEdit ? `Edit ${task.title}` : "Delete task"}
+          className="task-delete"
           style={{
             background: "none", border: "none", cursor: "pointer",
-            color: "var(--text-muted)", padding: 6, borderRadius: 8,
+            color: "var(--text-muted)", padding: 6, borderRadius: "var(--radius-iphone)",
             display: "flex", opacity: 0.6, transition: "opacity 0.15s ease",
             flexShrink: 0,
           }}
           onMouseEnter={e => e.currentTarget.style.opacity = 1}
           onMouseLeave={e => e.currentTarget.style.opacity = 0.6}
         >
-          <Icon name="x" size={15} />
+          <Icon name={onEdit ? "edit" : "x"} size={15} />
         </button>
       </div>
     </div>
@@ -790,67 +1657,28 @@ function TaskRow({ task, color, onToggle, onDelete }) {
 function QuickAdd({ onAdd, placeholder, autoFocus, onCancel, withDate }) {
   const [value, setValue] = useState("");
   const [dueDate, setDueDate] = useState(withDate ? tomorrowISO() : null);
+  const [repeat, setRepeat] = useState("none");
+  const [repeatUntil, setRepeatUntil] = useState("");
+  const [time, setTime] = useState("");
+  const [notify, setNotify] = useState(false);
   const inputRef = useRef(null);
-
-  useEffect(() => {
-    if (autoFocus && inputRef.current) inputRef.current.focus();
-  }, [autoFocus]);
-
+  useEffect(() => { if (autoFocus) inputRef.current?.focus(); }, [autoFocus]);
   const submit = () => {
     const trimmed = value.trim();
-    if (trimmed) {
-      if (withDate) {
-        onAdd(trimmed, dueDate || tomorrowISO());
-        setDueDate(tomorrowISO());
-      } else {
-        onAdd(trimmed);
-      }
-      setValue("");
-      if (inputRef.current) inputRef.current.focus();
-    }
+    if (!trimmed || (withDate && (!validISO(dueDate) || (repeat !== "none" && repeatUntil && repeatUntil < dueDate)))) return;
+    if (withDate) { onAdd(trimmed, dueDate || tomorrowISO(), { repeat, repeatUntil, time, notify: !!time && notify }); setDueDate(tomorrowISO()); setRepeat("none"); setRepeatUntil(""); setTime(""); setNotify(false); }
+    else onAdd(trimmed);
+    setValue(""); inputRef.current?.focus();
   };
-
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 8,
-      background: "var(--surface)",
-      border: "1.5px solid var(--border-strong)",
-      borderRadius: "var(--radius-control)",
-      padding: "11px 10px 11px 14px",
-    }}>
-      <input
-        ref={inputRef}
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === "Enter") submit();
-          if (e.key === "Escape") { setValue(""); onCancel && onCancel(); }
-        }}
-        placeholder={placeholder || "What do you need to do?"}
-        style={{
-          flex: 1, border: "none", outline: "none", background: "transparent",
-          fontSize: 15.5, color: "var(--text-primary)", fontFamily: "inherit",
-          minWidth: 0,
-        }}
-      />
-      {withDate && (
-        <DatePickerButton value={dueDate} onChange={setDueDate} />
-      )}
-      {value.trim() && (
-        <button
-          onClick={submit}
-          style={{
-            background: "var(--text-primary)", color: "var(--bg)",
-            border: "none", borderRadius: 8, width: 30, height: 30,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", flexShrink: 0,
-          }}
-        >
-          <Icon name="check" size={15} style={{ strokeWidth: 3 }} />
-        </button>
-      )}
-    </div>
-  );
+  return <div className={`quick-add ${withDate ? "has-date" : ""}`}>
+    <input ref={inputRef} aria-label={placeholder || "Task title"} value={value}
+      onChange={e => setValue(e.target.value)}
+      onKeyDown={e => { if (e.key === "Enter" && !e.nativeEvent.isComposing) submit(); if (e.key === "Escape") { setValue(""); onCancel?.(); } }}
+      placeholder={placeholder || "What do you need to do?"} />
+    <button type="button" className="quick-add-submit" aria-label="Add task" disabled={!value.trim() || (withDate && (!validISO(dueDate) || (repeat !== "none" && repeatUntil && repeatUntil < dueDate)))} onClick={submit}><Icon name="check" size={17} /></button>
+    {withDate && <DatePickerButton value={dueDate} onChange={setDueDate} />}
+    {withDate && <div className="quick-repeat"><EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} /><RepeatFields compact repeat={repeat} onRepeat={setRepeat} until={repeatUntil} onUntil={setRepeatUntil} startDate={dueDate} />{repeat !== "none" && repeatUntil && repeatUntil < dueDate && <p className="editor-error" role="alert">End date must be on or after the first event.</p>}</div>}
+  </div>;
 }
 
 /* ---------- class card (dashboard) ---------- */
@@ -858,17 +1686,17 @@ function QuickAdd({ onAdd, placeholder, autoFocus, onCancel, withDate }) {
 function ClassCard({
   cls, activeTasks, expanded, onToggleExpand, onOpenFull,
   dragHandleProps, isDragging, isDropTarget,
-  onQuickAdd,
+  onQuickAdd, onMoveUp, onMoveDown,
 }) {
   const count = activeTasks.length;
   const previewCutoff = tomorrowISO();
   const dueSoon = activeTasks.filter(t => t.dueDate && t.dueDate <= previewCutoff);
-  const preview = dueSoon.slice(0, 3);
-  const extra = dueSoon.length - preview.length;
+  const preview = dueSoon.slice(0, 1);
 
   return (
-    <div
+    <div className="class-card"
       style={{
+        "--class-color": cls.color,
         background: "var(--surface)",
         border: isDropTarget ? "1.5px solid var(--border-strong)" : "1px solid var(--border)",
         borderRadius: "var(--radius-card)",
@@ -878,9 +1706,11 @@ function ClassCard({
         overflow: "hidden",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center" }}>
+      <div className="class-card-header">
+
         <div
           {...dragHandleProps}
+          className="desktop-grip"
           aria-label={`Reorder ${cls.name}`}
           style={{
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -892,23 +1722,24 @@ function ClassCard({
         </div>
         <button
           onClick={onToggleExpand}
+          className="class-open" aria-expanded={expanded}
           style={{
             display: "flex", alignItems: "center", gap: 14,
             background: "transparent", border: "none",
-            padding: "16px 18px 16px 2px",
+            padding: 0,
             cursor: "pointer", textAlign: "left",
-            width: "100%",
+            flex: 1, minWidth: 0,
           }}
         >
-          <div style={{
-            width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+          <div className="class-symbol" style={{
+            width: 30, height: 30, borderRadius: "var(--radius-iphone)", flexShrink: 0,
             background: `${cls.color}22`, color: cls.color,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             <Icon name={categoryIcon(cls.category)} size={15} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
+            <div className="class-title" style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
               {cls.name}
             </div>
             {count === 0 ? (
@@ -938,17 +1769,13 @@ function ClassCard({
                     </span>
                   </div>
                 ))}
-                {extra > 0 && (
-                  <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginLeft: 10 }}>
-                    +{extra} more
-                  </div>
-                )}
+
               </div>
             )}
           </div>
           {count > 0 && (
             <div style={{
-              minWidth: 26, height: 26, borderRadius: 13, padding: "0 8px",
+              minWidth: 26, height: 26, borderRadius: "var(--radius-iphone)", padding: "0 8px",
               background: `${cls.color}22`, color: cls.color,
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 13, fontWeight: 700, flexShrink: 0,
@@ -965,26 +1792,32 @@ function ClassCard({
       </div>
 
       <div style={{
-        maxHeight: expanded ? 260 : 0,
+        maxHeight: expanded ? 520 : 0,
         opacity: expanded ? 1 : 0,
         transition: "max-height 0.24s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease",
         overflow: "hidden",
       }}>
-        <div style={{ padding: "0 18px 16px", borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+        <div className="class-card-details">
           <QuickAdd
             autoFocus={expanded}
             placeholder="Add a task"
             onAdd={onQuickAdd}
             withDate
           />
+          <div className="class-card-actions">
           <button onClick={onOpenFull} style={{
             display: "flex", alignItems: "center", gap: 4, background: "none", border: "none",
             color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer",
             padding: "10px 2px 2px", width: "100%",
           }}>
-            View all in {cls.name}
+            All tasks
             <Icon name="chevron" size={13} />
           </button>
+        <div className="touch-reorder" aria-label={`Reorder ${cls.name}`}>
+          <button aria-label={`Move ${cls.name} up`} disabled={!onMoveUp} onClick={onMoveUp}><Icon name="chevron" size={16} style={{transform: "rotate(-90deg)"}} /></button>
+          <button aria-label={`Move ${cls.name} down`} disabled={!onMoveDown} onClick={onMoveDown}><Icon name="chevron" size={16} style={{transform: "rotate(90deg)"}} /></button>
+        </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1017,10 +1850,10 @@ function ColorPackPicker({ selectedColor, onSelect }) {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 4, marginBottom: 12, background: "var(--bg)", borderRadius: 10, padding: 3 }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 12, background: "var(--bg)", borderRadius: "var(--radius-iphone)", padding: 3 }}>
         {COLOR_PACKS.map(p => (
           <button key={p.key} onClick={() => setActivePack(p.key)} style={{
-            flex: 1, padding: "7px 6px", borderRadius: 7, border: "none", cursor: "pointer",
+            flex: 1, padding: "7px 6px", borderRadius: "var(--radius-iphone)", border: "none", cursor: "pointer",
             background: activePack === p.key ? "var(--surface)" : "transparent",
             color: activePack === p.key ? "var(--text-primary)" : "var(--text-secondary)",
             fontWeight: activePack === p.key ? 700 : 500, fontSize: 12,
@@ -1036,7 +1869,7 @@ function ColorPackPicker({ selectedColor, onSelect }) {
           const isVeryLight = isLightColor(c);
           return (
             <button key={c} onClick={() => onSelect(c)} style={{
-              width: 28, height: 28, borderRadius: "50%", background: c,
+              width: 44, height: 44, borderRadius: "50%", background: c,
               border: selectedColor === c
                 ? "2.5px solid var(--text-primary)"
                 : (isVeryLight ? "2.5px solid var(--border-strong)" : "2.5px solid transparent"),
@@ -1062,7 +1895,7 @@ function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, 
   const completed = tasks.filter(t => t.done);
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
+    <div className="screen" style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 0 8px" }}>
         <button onClick={onBack} style={{
           display: "flex", alignItems: "center", gap: 4, background: "none", border: "none",
@@ -1144,13 +1977,13 @@ function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, 
         <div style={{ marginBottom: 18 }}>
           <QuickAdd
             autoFocus
-            onAdd={(title, dueDate) => { onAdd(title, dueDate); }}
+            onAdd={(title, dueDate, options) => { onAdd(title, dueDate, options); }}
             onCancel={() => setShowAdd(false)}
             withDate
           />
         </div>
       ) : (
-        <button onClick={() => setShowAdd(true)} style={{
+        <button className="class-add-action" onClick={() => setShowAdd(true)} style={{
           display: "flex", alignItems: "center", gap: 8, width: "100%",
           padding: "12px 14px", marginBottom: 18,
           background: "var(--surface)", border: "1.5px dashed var(--border-strong)",
@@ -1174,7 +2007,7 @@ function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, 
       )}
 
       {active.length > 0 && (
-        <div>
+        <div className="task-surface">
           {active.map(t => (
             <TaskRow key={t.id} task={t} color={cls.color} onToggle={onToggle} onDelete={onDelete} />
           ))}
@@ -1191,7 +2024,7 @@ function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, 
             Completed ({completed.length})
           </button>
           {showCompleted && (
-            <div style={{ marginTop: 6, opacity: 0.75 }}>
+            <div className="task-surface" style={{ marginTop: 12, opacity: 0.75 }}>
               {completed.map(t => (
                 <TaskRow key={t.id} task={t} color={cls.color} onToggle={onToggle} onDelete={onDelete} />
               ))}
@@ -1208,6 +2041,7 @@ function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, 
 /* ---------- add class/club/sport sheet ---------- */
 
 function AddItemSheet({ onAdd, onClose }) {
+  useSheet(true, onClose);
   const [category, setCategory] = useState(null);
   const [name, setName] = useState("");
   const inputRef = useRef(null);
@@ -1225,7 +2059,7 @@ function AddItemSheet({ onAdd, onClose }) {
 
   const selectedCat = CATEGORIES.find(c => c.key === category);
 
-  return (
+  return ReactDOM.createPortal((
     <>
       <div
         onClick={onClose}
@@ -1235,10 +2069,10 @@ function AddItemSheet({ onAdd, onClose }) {
           animation: "fadeIn 0.15s ease",
         }}
       />
-      <div style={{
+      <div className="mobile-sheet centered-sheet" role="dialog" aria-modal="true" aria-label="Add a class or activity" style={{
         position: "fixed", left: "50%", top: "50%",
         transform: "translate(-50%, -50%)", width: "min(400px, calc(100vw - 40px))",
-        background: "var(--surface-raised)", borderRadius: 20,
+        background: "var(--surface-raised)", borderRadius: "var(--radius-iphone)",
         border: "1px solid var(--border)", boxShadow: "var(--shadow-lift)",
         padding: 20, zIndex: 41,
         animation: "popIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)",
@@ -1253,7 +2087,7 @@ function AddItemSheet({ onAdd, onClose }) {
               {CATEGORIES.map(c => (
                 <button key={c.key} onClick={() => setCategory(c.key)} style={{
                   display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
-                  padding: "16px 10px", borderRadius: 14,
+                  padding: "16px 10px", borderRadius: "var(--radius-iphone)",
                   border: "1px solid var(--border)", background: "var(--bg)",
                   cursor: "pointer",
                 }}>
@@ -1271,7 +2105,7 @@ function AddItemSheet({ onAdd, onClose }) {
             </button>
           </>
         ) : (
-          <>
+          <div className="sheet-step" key={category}>
             <button onClick={() => setCategory(null)} style={{
               display: "flex", alignItems: "center", gap: 5, background: "none", border: "none",
               color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer",
@@ -1281,7 +2115,7 @@ function AddItemSheet({ onAdd, onClose }) {
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
               <div style={{
-                width: 36, height: 36, borderRadius: 10, background: "var(--bg)",
+                width: 36, height: 36, borderRadius: "var(--radius-iphone)", background: "var(--bg)",
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}>
                 <Icon name={selectedCat.icon} size={18} style={{ color: "var(--text-primary)" }} />
@@ -1307,11 +2141,11 @@ function AddItemSheet({ onAdd, onClose }) {
             }}>
               Add {selectedCat.label.toLowerCase()}
             </button>
-          </>
+          </div>
         )}
       </div>
     </>
-  );
+  ), document.body);
 }
 
 /* ---------- due today warning banner ---------- */
@@ -1380,7 +2214,33 @@ function DueTodayBanner({ tasks, classById, onOpenClass, onToggle }) {
   );
 }
 
+function TodayFocus({ tasks }) {
+  const today = todayISO();
+  const due = tasks.filter(t => t.dueDate === today);
+  const done = due.filter(t => t.done).length;
+  const left = due.length - done;
+  const overdue = tasks.filter(t => !t.done && isOverdue(t.dueDate)).length;
+  const percent = due.length ? Math.round(done / due.length * 100) : 0;
+  return (
+    <section className="focus-card" aria-label="Today's focus">
+      <div className="focus-top">
+        <div style={{ minWidth: 0 }}>
+          <p className="eyebrow">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</p>
+          <h2 className="focus-title">{due.length ? (left ? `${left} ${left === 1 ? "task" : "tasks"} left today.` : "Today, taken care of.") : "One task at a time."}</h2>
+        </div>
+        <div className="focus-emblem" data-complete={due.length > 0 && !left} aria-hidden="true"><Icon name={due.length && !left ? "check" : "calendar"} size={23} /></div>
+      </div>
+      <p className="focus-copy">{overdue ? `${overdue} overdue ${overdue === 1 ? "task needs" : "tasks need"} a little attention.` : due.length ? (left ? "A little focus now. A lighter day ahead." : "Nice work. Enjoy a little breathing room.") : "Nothing due today. Plan ahead or take a breather."}</p>
+      {due.length > 0 && <>
+        <div className="focus-track" role="progressbar" aria-label="Tasks due today completed" aria-valuemin={0} aria-valuemax={due.length} aria-valuenow={done}><div className="focus-fill" style={{ width: `${percent}%` }} /></div>
+        <div className="focus-meta"><span>{done} of {due.length} complete</span><span>{percent}%</span></div>
+      </>}
+    </section>
+  );
+}
+
 function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReorder, onToggleTask }) {
+  const isMobile = useIsMobile();
   const [adding, setAdding] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [dragId, setDragId] = useState(null);
@@ -1435,7 +2295,7 @@ function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReord
   const streak = useMemo(() => computeStreak(tasks), [tasks]);
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
+    <div className="screen" style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
       {dueTodayTasks.length > 0 && (
         <DueTodayBanner tasks={dueTodayTasks} classById={classById} onOpenClass={onOpenClass} onToggle={onToggleTask} />
       )}
@@ -1446,7 +2306,7 @@ function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReord
           <div style={{
             display: "flex", alignItems: "center", gap: 5,
             background: "#D4884F1a", color: "#C67A3F",
-            borderRadius: 20, padding: "6px 12px",
+            borderRadius: "var(--radius-iphone)", padding: "6px 12px",
             fontSize: 13, fontWeight: 700, flexShrink: 0,
           }}>
             <Icon name="flame" size={14} />
@@ -1455,18 +2315,21 @@ function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReord
         )}
       </div>
 
+      {classes.length > 0 && <TodayFocus tasks={tasks} />}
       {classes.length === 0 && (
         <div style={{ textAlign: "center", padding: "56px 20px", color: "var(--text-muted)" }}>
-          <div style={{ fontSize: 15, marginBottom: 4 }}>No classes yet</div>
+          <div className="empty-orbit" aria-hidden="true"><Icon name="grid" size={28} /></div>
+          <div style={{ fontSize: 19, fontWeight: 650, marginBottom: 7, color: "var(--text-primary)" }}>A fresh start.</div>
           <div style={{ fontSize: 13.5 }}>Add your first class, club, or activity below to get started.</div>
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }} onDrop={handleDrop} onDragOver={e => e.preventDefault()}>
+      <div className="class-list" style={{ display: "flex", flexDirection: "column", gap: 10 }} onDrop={handleDrop} onDragOver={e => e.preventDefault()}>
         {classes.map((cls, i) => (
           <div
             key={cls.id}
-            draggable
+            style={{ "--arrival-delay": `${Math.min(i, 6) * 35}ms` }}
+            draggable={!isMobile}
             onDragStart={handleDragStart(cls.id)}
             onDragOver={handleDragOver(cls.id, i)}
             onDragEnd={handleDragEnd}
@@ -1477,7 +2340,9 @@ function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReord
               expanded={expandedId === cls.id}
               onToggleExpand={() => setExpandedId(id => id === cls.id ? null : cls.id)}
               onOpenFull={() => onOpenClass(cls.id)}
-              onQuickAdd={(title, dueDate) => onAddTask(cls.id, title, dueDate)}
+              onQuickAdd={(title, dueDate, options) => onAddTask(cls.id, title, dueDate, options)}
+              onMoveUp={i > 0 ? () => onReorder(cls.id, classes[i - 1].id) : null}
+              onMoveDown={i < classes.length - 1 ? () => onReorder(cls.id, classes[i + 1].id) : null}
               dragHandleProps={{ draggable: true, onDragStart: handleDragStart(cls.id) }}
               isDragging={dragId === cls.id}
               isDropTarget={dropIndex === i && dragId && dragId !== cls.id}
@@ -1487,7 +2352,7 @@ function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReord
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <button onClick={() => setAdding(true)} style={{
+        <button className="class-add-action" onClick={() => setAdding(true)} style={{
           display: "flex", alignItems: "center", gap: 8, width: "100%",
           padding: "13px 14px",
           background: "transparent", border: "1.5px dashed var(--border-strong)",
@@ -1510,7 +2375,15 @@ function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReord
 
 /* ---------- all tasks screen ---------- */
 
-function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
+function SegmentedControl({ label, options, value, onChange }) {
+  return <div className="segmented-control" role="group" aria-label={label}
+    style={{ "--segment-count": options.length, "--active-segment": Math.max(0, options.findIndex(([key]) => key === value)) }}>
+    <span className="segment-pill" aria-hidden="true" />
+    {options.map(([key, text]) => <button key={key} type="button" aria-pressed={value === key} onClick={() => onChange(key)}>{text}</button>)}
+  </div>;
+}
+
+function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass, onEdit }) {
   const [viewMode, setViewMode] = useState("important");
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim().toLowerCase();
@@ -1536,10 +2409,10 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
   }, [tasks, trimmedQuery, isSearching]);
 
   const byClass = useMemo(() => {
-    const groups = classes
+    const groups = [...classes, { id: "", name: "General events", color: "var(--accent)" }]
       .map(c => {
         const items = tasks
-          .filter(t => t.classId === c.id && !t.done)
+          .filter(t => (c.id ? t.classId === c.id : !t.classId) && !t.done)
           .sort((a, b) => {
             const ad = a.dueDate || "9999-99-99";
             const bd = b.dueDate || "9999-99-99";
@@ -1575,26 +2448,15 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
   const total = byClass.reduce((n, g) => n + g.items.length, 0);
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
+    <div className="screen" style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
       <div style={{ padding: "28px 0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>Tasks</h1>
         {!isSearching && (
-          <div style={{ display: "flex", gap: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 11, padding: 3 }}>
-            {[["important", "Important"], ["all", "All"]].map(([key, label]) => (
-              <button key={key} onClick={() => setViewMode(key)} style={{
-                padding: "6px 13px", borderRadius: 8, border: "none", cursor: "pointer",
-                background: viewMode === key ? "var(--text-primary)" : "transparent",
-                color: viewMode === key ? "var(--bg)" : "var(--text-secondary)",
-                fontSize: 13, fontWeight: 600, transition: "all 0.15s ease",
-              }}>
-                {label}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl label="Task filter" options={[["important", "Important"], ["all", "All"]]} value={viewMode} onChange={setViewMode} />
         )}
       </div>
 
-      <div style={{
+      <div className="search-field" style={{
         display: "flex", alignItems: "center", gap: 8, marginBottom: 20,
         background: "var(--surface)", border: "1px solid var(--border)",
         borderRadius: "var(--radius-control)", padding: "10px 13px",
@@ -1619,32 +2481,15 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
         )}
       </div>
 
+      <p className="task-edit-hint">Hold a task to edit, or tap its pencil.</p>
       {isSearching ? (
         searchResults.length === 0 ? (
           <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)", fontSize: 14.5 }}>
             No tasks match "{query.trim()}"
           </div>
         ) : (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", padding: "2px 14px", boxShadow: "var(--shadow)" }}>
-            {searchResults.map(t => {
-              const cls = classById[t.classId];
-              return (
-                <div key={t.id}>
-                  <button
-                    onClick={() => cls && onOpenClass(cls.id)}
-                    style={{
-                      background: "none", border: "none", padding: "10px 0 0", cursor: cls ? "pointer" : "default",
-                      display: "flex", alignItems: "center", gap: 6, color: "var(--text-secondary)", fontSize: 12,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {cls && <span style={{ width: 7, height: 7, borderRadius: "50%", background: cls.color }} />}
-                    {cls ? cls.name : "Unknown class"}
-                  </button>
-                  <TaskRow task={t} color={cls ? cls.color : "var(--text-muted)"} onToggle={onToggle} onDelete={onDelete} />
-                </div>
-              );
-            })}
+          <div className="task-card-list">
+            {searchResults.map(t => <CalendarEvent key={t.id} task={t} cls={classById[t.classId]} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} showDate />)}
           </div>
         )
       ) : viewMode === "important" ? (
@@ -1653,19 +2498,8 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
             Nothing due today or tomorrow.
           </div>
         ) : (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow)", overflow: "hidden" }}>
-            {importantTasks.map(t => {
-              const cls = classById[t.classId];
-              const stripColor = cls ? cls.color : "var(--text-muted)";
-              return (
-                <div key={t.id} style={{ display: "flex", alignItems: "stretch" }}>
-                  <div style={{ width: 4, background: stripColor, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <TaskRow task={t} color={stripColor} onToggle={onToggle} onDelete={onDelete} />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="task-card-list">
+            {importantTasks.map(t => <CalendarEvent key={t.id} task={t} cls={classById[t.classId]} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} showDate />)}
           </div>
         )
       ) : (
@@ -1678,17 +2512,17 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
 
           {byClass.map(({ cls, items }) => (
             <div key={cls.id} style={{ marginBottom: 22 }}>
-              <button onClick={() => onOpenClass(cls.id)} style={{
+              <button disabled={!cls.id} onClick={() => onOpenClass(cls.id)} style={{
                 display: "flex", alignItems: "center", gap: 8, background: "none", border: "none",
-                cursor: "pointer", padding: "0 0 8px", color: "var(--text-primary)",
+                cursor: cls.id ? "pointer" : "default", opacity: 1, padding: "0 0 8px", color: "var(--text-primary)",
               }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: cls.color }} />
                 <span style={{ fontSize: 14.5, fontWeight: 600 }}>{cls.name}</span>
                 <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{items.length}</span>
               </button>
-              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", padding: "2px 14px", boxShadow: "var(--shadow)" }}>
+              <div className="task-card-list">
                 {items.map(t => (
-                  <TaskRow key={t.id} task={t} color={cls.color} onToggle={onToggle} onDelete={onDelete} />
+                  <CalendarEvent key={t.id} task={t} cls={cls} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} showDate />
                 ))}
               </div>
             </div>
@@ -1701,440 +2535,354 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
 
 /* ---------- calendar screen ---------- */
 
-function CalendarScreen({ classes, tasks, onToggle, onDelete, onOpenClass }) {
-  const [viewMode, setViewMode] = useState(() => {
-    return (typeof window !== "undefined" && window.innerWidth < 640) ? "day" : "month";
-  });
-  const [cursor, setCursor] = useState(() => {
-    const d = new Date();
-    return { year: d.getFullYear(), month: d.getMonth() };
-  });
-  const [selectedDate, setSelectedDate] = useState(todayISO());
-
-  const classById = useMemo(() => {
-    const m = {};
-    classes.forEach(c => { m[c.id] = c; });
-    return m;
-  }, [classes]);
-
-  const tasksByDate = useMemo(() => {
-    const m = {};
-    tasks.filter(t => !t.done && t.dueDate).forEach(t => {
-      (m[t.dueDate] = m[t.dueDate] || []).push(t);
-    });
-    return m;
-  }, [tasks]);
-
-  const today = todayISO();
-  const weekdayLabels = ["S", "M", "T", "W", "T", "F", "S"];
-  const weekdayLabelsFull = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  // ---- navigation across all views, driven off selectedDate ----
-  const selectedDateObj = dateFromISO(selectedDate);
-
-  const goDay = (delta) => {
-    const d = new Date(selectedDateObj);
-    d.setDate(d.getDate() + delta);
-    const iso = isoFromDate(d);
-    setSelectedDate(iso);
-    setCursor({ year: d.getFullYear(), month: d.getMonth() });
+function TimeWheel({ label, options, value, onChange, open }) {
+  const list = useRef(null);
+  const selectedIndex = options.indexOf(value);
+  const lastIndex = useRef(selectedIndex);
+  const interacting = useRef(false);
+  const settleTimer = useRef(null);
+  const ignoredUntil = useRef(0);
+  const id = React.useId();
+  useEffect(() => () => clearTimeout(settleTimer.current), []);
+  useEffect(() => {
+    if (!open) { interacting.current = false; clearTimeout(settleTimer.current); return; }
+    if (!list.current || interacting.current) return;
+    lastIndex.current = selectedIndex;
+    ignoredUntil.current = performance.now() + 60;
+    list.current.scrollTop = Math.max(0, selectedIndex) * 44;
+  }, [open, selectedIndex]);
+  const select = index => {
+    index = Math.max(0, Math.min(options.length - 1, index));
+    if (index === lastIndex.current) return;
+    lastIndex.current = index;
+    vibrate(5);
+    onChange(options[index]);
   };
-
-  const goWeek = (delta) => {
-    const d = new Date(selectedDateObj);
-    d.setDate(d.getDate() + delta * 7);
-    const iso = isoFromDate(d);
-    setSelectedDate(iso);
-    setCursor({ year: d.getFullYear(), month: d.getMonth() });
+  const scroll = () => {
+    if (!open || performance.now() < ignoredUntil.current) return;
+    interacting.current = true;
+    select(Math.round(list.current.scrollTop / 44));
+    clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => { interacting.current = false; }, 160);
   };
-
-  const goMonth = (delta) => {
-    let m = cursor.month + delta;
-    let y = cursor.year;
-    if (m < 0) { m = 11; y -= 1; }
-    if (m > 11) { m = 0; y += 1; }
-    setCursor({ year: y, month: m });
-  };
-
-  const goToday = () => {
-    setSelectedDate(today);
-    const d = new Date();
-    setCursor({ year: d.getFullYear(), month: d.getMonth() });
-  };
-
-  const selectedTasks = (tasksByDate[selectedDate] || []).sort((a, b) => a.createdAt - b.createdAt);
-
-  /* ---------- header label per view ---------- */
-  let headerLabel;
-  if (viewMode === "day") {
-    headerLabel = selectedDateObj.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
-  } else if (viewMode === "week") {
-    const weekStart = new Date(selectedDateObj);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 6);
-    const sameMonth = weekStart.getMonth() === weekEnd.getMonth();
-    headerLabel = sameMonth
-      ? `${weekStart.toLocaleDateString(undefined, { month: "long" })} ${weekStart.getDate()}\u2013${weekEnd.getDate()}`
-      : `${weekStart.toLocaleDateString(undefined, { month: "short", day: "numeric" })} \u2013 ${weekEnd.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
-  } else {
-    headerLabel = new Date(cursor.year, cursor.month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
-  }
-
-  const handlePrev = () => {
-    if (viewMode === "day") goDay(-1);
-    else if (viewMode === "week") goWeek(-1);
-    else goMonth(-1);
-  };
-  const handleNext = () => {
-    if (viewMode === "day") goDay(1);
-    else if (viewMode === "week") goWeek(1);
-    else goMonth(1);
-  };
-
-  return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "0 20px 100px" }}>
-      <div style={{ padding: "28px 0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>Calendar</h1>
-        <div style={{ display: "flex", gap: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 11, padding: 3 }}>
-          {[["day", "Day"], ["week", "Week"], ["month", "Month"]].map(([key, label]) => (
-            <button key={key} onClick={() => setViewMode(key)} style={{
-              padding: "6px 13px", borderRadius: 8, border: "none", cursor: "pointer",
-              background: viewMode === key ? "var(--text-primary)" : "transparent",
-              color: viewMode === key ? "var(--bg)" : "var(--text-secondary)",
-              fontSize: 13, fontWeight: 600, transition: "all 0.15s ease",
-            }}>
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 10 }}>
-        <button onClick={handlePrev} aria-label="Previous" style={{
-          background: "var(--surface)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-secondary)",
-          padding: 8, display: "flex", borderRadius: 10, flexShrink: 0,
-        }}>
-          <Icon name="chevron" size={18} style={{ transform: "rotate(180deg)" }} />
-        </button>
-        <button onClick={goToday} style={{
-          flex: 1, textAlign: "center", fontSize: viewMode === "day" ? 16 : 17, fontWeight: 700,
-          background: "none", border: "none", cursor: "pointer", color: "var(--text-primary)",
-          padding: "6px 4px", borderRadius: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-        }}>
-          {headerLabel}
-        </button>
-        <button onClick={handleNext} aria-label="Next" style={{
-          background: "var(--surface)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-secondary)",
-          padding: 8, display: "flex", borderRadius: 10, flexShrink: 0,
-        }}>
-          <Icon name="chevron" size={18} />
-        </button>
-      </div>
-
-      {viewMode === "month" && (
-        <MonthGrid
-          year={cursor.year} month={cursor.month} today={today}
-          selectedDate={selectedDate} setSelectedDate={setSelectedDate}
-          tasksByDate={tasksByDate} classById={classById}
-          weekdayLabels={weekdayLabels}
-        />
-      )}
-
-      {viewMode === "week" && (
-        <WeekGrid
-          selectedDateObj={selectedDateObj} today={today}
-          selectedDate={selectedDate} setSelectedDate={setSelectedDate}
-          tasksByDate={tasksByDate} classById={classById}
-          weekdayLabelsFull={weekdayLabelsFull}
-        />
-      )}
-
-      <div style={{ marginTop: viewMode === "day" ? 4 : 22 }}>
-        {viewMode !== "day" && (
-          <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 10, color: "var(--text-primary)" }}>
-            {selectedDate === today ? "Today" : dateFromISO(selectedDate).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
-          </div>
-        )}
-        {selectedTasks.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "36px 20px", color: "var(--text-muted)", fontSize: 14.5 }}>
-            Nothing due this day.
-          </div>
-        ) : (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", padding: "2px 14px", boxShadow: "var(--shadow)" }}>
-            {selectedTasks.map(t => {
-              const cls = classById[t.classId];
-              return (
-                <div key={t.id}>
-                  <button
-                    onClick={() => cls && onOpenClass(cls.id)}
-                    style={{
-                      background: "none", border: "none", padding: "10px 0 0", cursor: cls ? "pointer" : "default",
-                      display: "flex", alignItems: "center", gap: 6, color: "var(--text-secondary)", fontSize: 12,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {cls && <span style={{ width: 7, height: 7, borderRadius: "50%", background: cls.color }} />}
-                    {cls ? cls.name : "Unknown class"}
-                  </button>
-                  <TaskRow task={t} color={cls ? cls.color : "var(--text-muted)"} onToggle={onToggle} onDelete={onDelete} />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ---------- month view grid ---------- */
-
-function MonthGrid({ year, month, today, selectedDate, setSelectedDate, tasksByDate, classById, weekdayLabels }) {
-  const isMobile = useIsMobile(640);
-  const firstOfMonth = new Date(year, month, 1);
-  const startWeekday = firstOfMonth.getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const cells = [];
-  for (let i = 0; i < startWeekday; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-
-  if (isMobile) {
-    return (
-      <div style={{
-        background: "var(--surface)", border: "1px solid var(--border)",
-        borderRadius: "var(--radius-card)", padding: "16px 10px", boxShadow: "var(--shadow)",
+  return <div className="time-picker-column"><span>{label}</span>
+    <div className="time-wheel-frame"><div className="time-wheel-band" aria-hidden="true" />
+      <div ref={list} className="time-wheel" role="listbox" tabIndex={0} aria-label={label} aria-activedescendant={`${id}-${Math.max(0,selectedIndex)}`} onScroll={scroll} onPointerDown={() => { ignoredUntil.current = 0; }} onWheel={() => { ignoredUntil.current = 0; }} onKeyDown={e => {
+        const moves = {ArrowDown:1,ArrowUp:-1,PageDown:5,PageUp:-5};
+        let index = e.key === "Home" ? 0 : e.key === "End" ? options.length - 1 : e.key in moves ? lastIndex.current + moves[e.key] : null;
+        if (index === null) return;
+        e.preventDefault(); index = Math.max(0,Math.min(options.length - 1,index));
+        interacting.current = true; select(index);
+        list.current.scrollTo({top:index * 44,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
       }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
-          {weekdayLabels.map((w, i) => (
-            <div key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", padding: "2px 0" }}>
-              {w}
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
-          {cells.map((d, i) => {
-            if (d === null) return <div key={i} />;
-            const iso = isoFromDate(new Date(year, month, d));
-            const dayTasks = tasksByDate[iso] || [];
-            const isToday = iso === today;
-            const isSelected = iso === selectedDate;
-            const overdueCount = dayTasks.filter(t => isOverdue(t.dueDate)).length;
-            const dotColors = [...new Set(dayTasks.slice(0, 4).map(t => {
-              if (isOverdue(t.dueDate)) return "#C15B5B";
-              const c = classById[t.classId];
-              return c ? c.color : "var(--text-muted)";
-            }))].slice(0, 4);
-            return (
-              <button
-                key={i}
-                onClick={() => setSelectedDate(iso)}
-                style={{
-                  aspectRatio: "1", display: "flex", flexDirection: "column",
-                  alignItems: "center", justifyContent: "center", gap: 3,
-                  borderRadius: 10, border: "none", cursor: "pointer",
-                  background: isSelected ? "var(--text-primary)" : (isToday ? "var(--bg)" : "transparent"),
-                  transition: "background 0.15s ease",
-                }}
-              >
-                <span style={{
-                  fontSize: 13.5, fontWeight: isToday ? 700 : 500,
-                  color: isSelected ? "var(--bg)" : (isToday ? "var(--text-primary)" : "var(--text-primary)"),
-                }}>
-                  {d}
-                </span>
-                {dotColors.length > 0 && (
-                  <div style={{ display: "flex", gap: 2.5, height: 5 }}>
-                    {dotColors.map((color, idx) => (
-                      <span key={idx} style={{
-                        width: 5, height: 5, borderRadius: "50%",
-                        background: isSelected ? "var(--bg)" : color,
-                        opacity: isSelected ? 0.85 : 1,
-                      }} />
-                    ))}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{
-      background: "var(--surface)", border: "1px solid var(--border)",
-      borderRadius: "var(--radius-card)", padding: 20, boxShadow: "var(--shadow)",
-    }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 6 }}>
-        {weekdayLabels.map((w, i) => (
-          <div key={i} style={{ textAlign: "center", fontSize: 12.5, fontWeight: 700, color: "var(--text-muted)", padding: "4px 0" }}>
-            {w}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
-        {cells.map((d, i) => {
-          if (d === null) return <div key={i} />;
-          const iso = isoFromDate(new Date(year, month, d));
-          const dayTasks = tasksByDate[iso] || [];
-          const isToday = iso === today;
-          const isSelected = iso === selectedDate;
-          const overdueCount = dayTasks.filter(t => isOverdue(t.dueDate)).length;
-          const preview = dayTasks.slice(0, 3);
-          const extra = dayTasks.length - preview.length;
-          return (
-            <button
-              key={i}
-              onClick={() => setSelectedDate(iso)}
-              style={{
-                minHeight: 92,
-                display: "flex", flexDirection: "column",
-                alignItems: "flex-start", justifyContent: "flex-start",
-                padding: "6px 6px",
-                borderRadius: 12,
-                border: isSelected ? "2px solid var(--text-primary)" : "1px solid var(--border)",
-                cursor: "pointer",
-                background: isSelected ? "var(--bg)" : (isToday ? "var(--bg)" : "var(--surface)"),
-                position: "relative",
-                transition: "background 0.15s ease, border-color 0.15s ease",
-                overflow: "hidden",
-              }}
-            >
-              <span style={{
-                fontSize: 13.5, fontWeight: isToday ? 700 : 600,
-                color: isToday ? "var(--text-primary)" : "var(--text-secondary)",
-                width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center",
-                borderRadius: "50%",
-                background: isToday ? `${overdueCount > 0 ? "#C15B5B" : "var(--text-primary)"}18` : "transparent",
-                flexShrink: 0,
-              }}>
-                {d}
-              </span>
-              <div style={{ display: "flex", flexDirection: "column", gap: 3, width: "100%", marginTop: 4 }}>
-                {preview.map(t => {
-                  const c = classById[t.classId];
-                  const bubbleColor = isOverdue(t.dueDate) ? "#C15B5B" : (c ? c.color : "var(--text-muted)");
-                  return (
-                    <div key={t.id} style={{
-                      fontSize: 10.5, lineHeight: 1.3, fontWeight: 600,
-                      color: bubbleColor,
-                      background: `${bubbleColor}1f`,
-                      borderRadius: 6,
-                      padding: "2.5px 6px",
-                      width: "100%",
-                      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                    }}>
-                      {t.title}
-                    </div>
-                  );
-                })}
-                {extra > 0 && (
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, paddingLeft: 4 }}>+{extra} more</div>
-                )}
-              </div>
-            </button>
-          );
-        })}
+        {options.map((option,index) => <div id={`${id}-${index}`} key={option} role="option" aria-selected={option === value} className="time-wheel-option" onClick={() => {
+          interacting.current = true; select(index); list.current.scrollTo({top:index * 44,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+        }}>{option}</div>)}
       </div>
     </div>
-  );
+  </div>;
 }
 
-/* ---------- week view grid ---------- */
-
-function WeekGrid({ selectedDateObj, today, selectedDate, setSelectedDate, tasksByDate, classById, weekdayLabelsFull }) {
-  const weekStart = new Date(selectedDateObj);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-
-  const days = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + i);
-    days.push(d);
-  }
-
-  return (
-    <div style={{
-      background: "var(--surface)", border: "1px solid var(--border)",
-      borderRadius: "var(--radius-card)", padding: 14, boxShadow: "var(--shadow)",
-      display: "flex", flexDirection: "column", gap: 6,
-    }}>
-      {days.map((d, i) => {
-        const iso = isoFromDate(d);
-        const dayTasks = (tasksByDate[iso] || []);
-        const isToday = iso === today;
-        const isSelected = iso === selectedDate;
-        const overdueCount = dayTasks.filter(t => isOverdue(t.dueDate)).length;
-        return (
-          <button
-            key={i}
-            onClick={() => setSelectedDate(iso)}
-            style={{
-              display: "flex", alignItems: "flex-start", gap: 12,
-              padding: "10px 10px",
-              borderRadius: 12,
-              border: isSelected ? "2px solid var(--text-primary)" : "1px solid var(--border)",
-              cursor: "pointer",
-              background: isSelected ? "var(--bg)" : (isToday ? "var(--bg)" : "transparent"),
-              textAlign: "left",
-              transition: "background 0.15s ease, border-color 0.15s ease",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 42, flexShrink: 0 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
-                {weekdayLabelsFull[d.getDay()]}
-              </span>
-              <span style={{
-                fontSize: 17, fontWeight: isToday ? 700 : 600,
-                color: isToday ? "var(--text-primary)" : "var(--text-secondary)",
-                width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center",
-                borderRadius: "50%", marginTop: 2,
-                background: isToday ? `${overdueCount > 0 ? "#C15B5B" : "var(--text-primary)"}18` : "transparent",
-              }}>
-                {d.getDate()}
-              </span>
-            </div>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4, minWidth: 0, paddingTop: 2 }}>
-              {dayTasks.length === 0 ? (
-                <span style={{ fontSize: 13, color: "var(--text-muted)" }}>&mdash;</span>
-              ) : (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {dayTasks.slice(0, 4).map(t => {
-                    const c = classById[t.classId];
-                    const bubbleColor = isOverdue(t.dueDate) ? "#C15B5B" : (c ? c.color : "var(--text-muted)");
-                    return (
-                      <span key={t.id} style={{
-                        fontSize: 12, fontWeight: 600, color: bubbleColor,
-                        background: `${bubbleColor}1f`, borderRadius: 7,
-                        padding: "3px 8px", maxWidth: "100%",
-                        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                      }}>
-                        {t.title}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-              {dayTasks.length > 4 && (
-                <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>+{dayTasks.length - 4} more</span>
-              )}
-            </div>
-          </button>
-        );
-      })}
+function EventTimePicker({ value, onChange }) {
+  const picker = useRef(null);
+  const [open, setOpen] = useState(false);
+  const current = useRef(value);
+  current.current = value;
+  const selected = validEventTime(value) ? value : "09:00";
+  const [hour, minute] = selected.split(":").map(Number);
+  const period = hour >= 12 ? "PM" : "AM";
+  const change = (part, next) => {
+    const [currentHour,currentMinute] = (validEventTime(current.current) ? current.current : "09:00").split(":").map(Number);
+    let h = currentHour, m = currentMinute;
+    if (part === "hour") h = Number(next) % 12 + (currentHour >= 12 ? 12 : 0);
+    if (part === "minute") m = Number(next);
+    if (part === "period") h = currentHour % 12 + (next === "PM" ? 12 : 0);
+    current.current = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+    onChange(current.current);
+  };
+  const columns = [
+    {key:"hour", label:"Hour", value:String(hour % 12 || 12), options:Array.from({length:12},(_,i)=>String(i+1))},
+    {key:"minute", label:"Minute", value:String(minute).padStart(2,"0"), options:Array.from({length:60},(_,i)=>String(i).padStart(2,"0"))},
+    {key:"period", label:"AM / PM", value:period, options:["AM","PM"]}
+  ];
+  return <details className="rounded-select event-time-picker" ref={picker} onKeyDown={e => {
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); picker.current.open = false; picker.current.querySelector("summary").focus(); }
+  }} onToggle={e => setOpen(e.currentTarget.open)}>
+    <summary aria-label={`Event time: ${value ? formatEventTime(value) : "all-day"}`}><span>{value ? formatEventTime(value) : "Choose time"}</span><Icon name="clock" size={18} /></summary>
+    <div className="time-picker-panel">
+      <div className="time-picker-columns">{columns.map(column => <TimeWheel key={column.key} label={column.label} options={column.options} value={column.value} open={open} onChange={next => change(column.key,next)} />)}</div>
+      <button className="primary-action" type="button" onClick={() => { if (!value) onChange(selected); picker.current.open = false; picker.current.querySelector("summary").focus(); }}>Done</button>
     </div>
-  );
+  </details>;
 }
+
+function EventTimeFields({ time, onTime, notify, onNotify }) {
+  return <div className="event-time-fields">
+    <div className="field-label"><span>Time <span className="field-optional">(optional)</span></span>
+      <EventTimePicker value={time} onChange={onTime} />
+    </div>
+    {time && <button type="button" className="clear-event-time" onClick={() => { onTime(""); onNotify(false); }}>Make all-day</button>}
+    <label className="notify-toggle"><input type="checkbox" checked={!!time && notify} disabled={!time} onChange={e => onNotify(e.target.checked)} /><span>Remind me while the app is open</span></label>
+    <p className="editor-hint">{time ? "Reminders appear while this app is open. Background phone notifications aren't connected yet." : "Leave the time blank for an all-day event. Choose a time to enable an in-app reminder."}</p>
+  </div>;
+}
+
+function ReminderCenter({ records }) {
+  const [reminder, setReminder] = useState(null);
+  const seen = useRef(null);
+  if (!seen.current) {
+    try { seen.current = new Set(JSON.parse(localStorage.getItem("classesApp.remindersShown.v1") || "[]")); }
+    catch { seen.current = new Set(); }
+  }
+  useEffect(() => {
+    const check = () => {
+      if (document.visibilityState !== "visible" || reminder) return;
+      const next = dueReminders(records, new Date()).find(task => !seen.current.has(reminderKey(task)));
+      if (!next) return;
+      seen.current.add(reminderKey(next));
+      try { localStorage.setItem("classesApp.remindersShown.v1", JSON.stringify([...seen.current].slice(-1000))); } catch {}
+      setReminder(next);
+    };
+    check();
+    const timer = setInterval(check, 15000);
+    document.addEventListener("visibilitychange", check);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", check); };
+  }, [records, reminder]);
+  useEffect(() => {
+    if (!reminder) return;
+    const current = resolveTask(records, reminder.id);
+    if (!current || current.done || current.deleted || !current.notify || current.time !== reminder.time || current.dueDate !== reminder.dueDate) setReminder(null);
+  }, [records, reminder]);
+  if (!reminder) return null;
+  return <aside className="event-reminder" role="alert" aria-label="Event reminder">
+    <Icon name="calendar" size={22} /><div><span className="reminder-heading">Event reminder · {formatEventTime(reminder.time)}</span><strong>{reminder.title}</strong></div>
+    <button type="button" className="quiet-icon" aria-label="Dismiss reminder" onClick={() => setReminder(null)}><Icon name="x" size={18} /></button>
+  </aside>;
+}
+
+function RoundedSelect({ value, onChange, options, disabled = false, label = "Choose an option", style }) {
+  const menu = useRef(null);
+  const selected = options.find(option => option[0] === value);
+  return <details ref={menu} className="rounded-select" style={style} onKeyDown={e => {
+    if (e.key === "Escape") { e.preventDefault(); menu.current.open = false; menu.current.querySelector("summary").focus(); }
+  }}>
+    <summary aria-label={label} aria-disabled={disabled} onClick={e => { if (disabled) e.preventDefault(); }}>
+      <span>{selected ? selected[1] : "Choose an option"}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+    </summary>
+    {!disabled && <div className="rounded-select-menu" role="group" aria-label={label}>
+      {options.map(([key, text]) => <button type="button" key={key} aria-pressed={key === value} onClick={() => {
+        onChange(key); menu.current.open = false; menu.current.querySelector("summary").focus();
+      }}><span>{text}</span>{key === value && <Icon name="check" size={16} />}</button>)}
+    </div>}
+  </details>;
+}
+
+function RepeatFields({ repeat, onRepeat, until, onUntil, startDate, disabled = false, compact = false }) {
+  const custom = customRepeat(repeat);
+  const defaults = { frequency: "weekly", interval: 1, days: [validISO(startDate) ? dateFromISO(startDate).getDay() : 1], ordinal: "1" };
+  const updateCustom = patch => onRepeat(customRepeatValue({ ...(custom || defaults), ...patch }));
+  return <div className={`repeat-fields ${compact ? "compact-repeat" : ""}`}>
+    <div className="field-label"><span>Repeat</span>
+      <RoundedSelect label="Repeat schedule" value={custom ? "custom" : repeat} onChange={value => onRepeat(value === "custom" ? customRepeatValue(defaults) : value)} disabled={disabled} options={[...REPEAT_OPTIONS, ["custom", "Custom…"]]} />
+    </div>
+    {custom && <div className="custom-repeat-panel">
+      <div className="field-label"><span>Frequency</span><RoundedSelect label="Repeat frequency" disabled={disabled} value={custom.frequency} onChange={frequency => updateCustom({ frequency })} options={[["weekly","Weekly"],["monthly","Monthly"]]} /></div>
+      <div className="field-label"><span>Repeat every</span><RoundedSelect label="Repeat interval" disabled={disabled} value={String(custom.interval)} onChange={interval => updateCustom({ interval: Number(interval) })} options={Array.from({length:12}, (_,i) => [String(i+1), `${i+1} ${custom.frequency === "weekly" ? i ? "weeks" : "week" : i ? "months" : "month"}`])} /></div>
+      {custom.frequency === "monthly" && <div className="field-label"><span>Which week</span><RoundedSelect label="Week of the month" disabled={disabled} value={custom.ordinal} onChange={ordinal => updateCustom({ordinal})} options={[["1","First"],["2","Second"],["3","Third"],["4","Fourth"],["last","Last"]]} /></div>}
+      <fieldset className="repeat-weekdays" disabled={disabled}><legend>On these days</legend><div>
+        {[1,2,3,4,5,6,0].map(day => <button type="button" key={day} aria-label={["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][day]} aria-pressed={custom.days.includes(day)} onClick={() => {
+          const days = custom.days.includes(day) ? custom.days.filter(d => d !== day) : [...custom.days,day];
+          if (days.length) updateCustom({ days: days.sort((a,b) => ((a+6)%7)-((b+6)%7)) });
+        }}>{["S","M","T","W","T","F","S"][day]}</button>)}
+      </div></fieldset>
+      <p className="editor-hint">{custom.frequency === "monthly" ? `On the ${custom.ordinal === "last" ? "last" : ["","first","second","third","fourth"][Number(custom.ordinal)]} selected weekdays of each scheduled month.` : "Weeks start on Monday."} Starts on or after the event date. Keep at least one day selected.</p>
+    </div>}
+    {repeat !== "none" && <label className="field-label"><span>End date <span className="field-optional">(optional)</span></span>
+      <input aria-label="Repeat end date" type="date" value={until} min={startDate} onChange={e => onUntil(e.target.value)} disabled={disabled} />
+    </label>}
+  </div>;
+}
+
+function CalendarEvent({ task, cls, onToggle, onEdit, onDelete, showDate = false, compact = false, dense = false }) {
+  const timer = useRef(null);
+  const origin = useRef(null);
+  const swipeAxis = useRef(null);
+  const swipeDelta = useRef(0);
+  const [pressing, setPressing] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const stopHold = () => { clearTimeout(timer.current); setPressing(false); };
+  const cancel = () => { stopHold(); origin.current = null; swipeAxis.current = null; swipeDelta.current = 0; setDragX(0); };
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const start = e => {
+    cancel();
+    if (e.button !== 0 || e.target.closest('[data-event-action]')) return;
+    origin.current = { x: e.clientX, y: e.clientY };
+    setPressing(true);
+    timer.current = setTimeout(() => { origin.current = null; setPressing(false); vibrate(15); onEdit(task); }, 500);
+  };
+  const move = e => {
+    if (!origin.current) return;
+    const dx = e.clientX - origin.current.x, dy = e.clientY - origin.current.y;
+    if (Math.hypot(dx,dy) > 10) stopHold();
+    if (!onDelete) return;
+    if (!swipeAxis.current && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      swipeAxis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      stopHold();
+    }
+    if (swipeAxis.current === "x") { swipeDelta.current = Math.max(-110,Math.min(110,dx)); setDragX(swipeDelta.current); }
+  };
+  const finish = () => {
+    const point = origin.current, delta = swipeDelta.current, horizontal = swipeAxis.current === "x";
+    cancel();
+    if (!onDelete || !horizontal) return;
+    if (delta >= SWIPE_THRESHOLD && !task.done) onToggle(task.id,point);
+    else if (delta <= -SWIPE_THRESHOLD) onDelete(task.id);
+  };
+  const toggle = e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    onToggle(task.id, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+  };
+  return <article className={`calendar-event ${compact ? "event-compact" : ""} ${dense ? "event-dense" : ""}`} data-done={task.done} data-pressing={pressing} data-swiping={dragX !== 0}
+    style={{ "--event-color": cls ? cls.color : "var(--accent)", "--swipe-x": `${dragX}px` }}
+    onPointerDown={start} onPointerMove={move} onPointerUp={finish} onPointerCancel={cancel} onPointerLeave={cancel}
+    onContextMenu={e => e.preventDefault()}>
+    <label className="event-check-target" data-event-action="true">
+      <input type="checkbox" checked={!!task.done} onChange={toggle} aria-label={`${task.done ? "Mark incomplete" : "Complete"}: ${task.title}`} />
+    </label>
+    <div className="event-copy">
+      {(compact || dense) && validEventTime(task.time) && <span className="event-time">{formatEventTime(task.time)}</span>}
+      {compact || dense ? <button className="event-title-button" onClick={() => onEdit(task)} aria-label={`Edit ${task.title}`}>{task.title}</button> : <div className="event-title">{task.title}</div>}
+      {!compact && <div className="event-meta">{cls ? cls.name : "General event"}{showDate && task.dueDate ? ` · ${formatDueLabel(task.dueDate)}` : ""}{validEventTime(task.time) ? ` · ${formatEventTime(task.time)}` : ""}{task.notify && validEventTime(task.time) ? " · Reminder" : ""}{task.repeat && task.repeat !== "none" ? ` · ${repeatLabel(task.repeat)}` : ""}{task.done ? " · Completed" : ""}</div>}
+    </div>
+    {!compact && !dense && <button className="event-edit" data-event-action="true" aria-label={`Edit ${task.title}`} onClick={() => onEdit(task)}><Icon name="edit" size={17} /></button>}
+  </article>;
+}
+
+function EditTaskSheet({ task, source, classes, onSave, onDelete, onDeleteSeries, onClose }) {
+  useSheet(true, onClose);
+  const [scope, setScope] = useState(task.seriesId ? "occurrence" : "series");
+  const [title, setTitle] = useState(task.title);
+  const [classId, setClassId] = useState(task.classId || "");
+  const [dueDate, setDueDate] = useState(task.dueDate || todayISO());
+  const [repeat, setRepeat] = useState(source.repeat || "none");
+  const [until, setUntil] = useState(source.repeatUntil || "");
+  const [time, setTime] = useState(task.time || "");
+  const [notify, setNotify] = useState(!!task.notify);
+  const inputRef = useRef(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  const changeScope = value => {
+    setScope(value);
+    const values = value === "series" ? source : task;
+    setTitle(values.title); setClassId(values.classId || ""); setDueDate(values.dueDate); setTime(values.time || ""); setNotify(!!values.notify);
+  };
+  const invalidEnd = repeat !== "none" && scope === "series" && until && until < dueDate;
+  const canSave = title.trim() && (!classId || classes.some(c => c.id === classId)) && validISO(dueDate) && !invalidEnd;
+  const submit = e => { e.preventDefault(); if (canSave) { onSave(task, { title: title.trim(), classId, dueDate, time, notify: !!time && notify, repeat, repeatUntil: repeat === "none" ? "" : until }, scope); onClose(); } };
+  return <>
+    <div className="edit-backdrop" onClick={onClose} />
+    <form className="mobile-sheet centered-sheet edit-sheet" role="dialog" aria-modal="true" aria-label="Edit event" onSubmit={submit}>
+      <div className="editor-heading"><h2>Edit event</h2><button type="button" className="quiet-icon" onClick={onClose} aria-label="Close edit event"><Icon name="x" size={19} /></button></div>
+      {task.seriesId && <div className="field-label">Apply changes to<RoundedSelect label="Apply changes to" value={scope} onChange={changeScope} options={[["occurrence","Only this occurrence"],["series","Entire series"]]} /></div>}
+      <label className="field-label">Title<input ref={inputRef} required maxLength={500} value={title} onChange={e => setTitle(e.target.value)} /></label>
+      <div className="field-label">Calendar category<RoundedSelect label="Calendar category" value={classId} onChange={setClassId} options={[["", "General event (no class)"], ...classes.map(c => [c.id,c.name])]} /></div>
+      <label className="field-label">{task.seriesId && scope === "series" ? "Series starts" : "Date"}<input type="date" required value={dueDate} onChange={e => setDueDate(e.target.value)} /></label>
+      <EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} />
+      <RepeatFields repeat={repeat} onRepeat={setRepeat} until={until} onUntil={setUntil} startDate={dueDate} disabled={!!task.seriesId && scope === "occurrence"} />
+      {task.seriesId && scope === "occurrence" && <p className="editor-hint">The rest of this series stays as scheduled. Choose “Entire series” to change the repeat schedule.</p>}
+      {invalidEnd && <p role="alert" className="editor-error">The end date must be on or after the start date.</p>}
+      <button className="primary-action" type="submit" disabled={!canSave}>Save changes</button>
+      <button type="button" className="delete-event" onClick={() => { if (task.seriesId && scope === "series") onDeleteSeries(task); else onDelete(task.id); onClose(); }}>{task.seriesId ? scope === "series" ? "Delete entire series" : "Delete this occurrence" : "Delete event"}</button>
+    </form>
+  </>;
+}
+
+function Confetti({ burst }) {
+  if (!burst) return null;
+  return <div className="confetti-layer" aria-hidden="true" key={burst.id}>
+    {Array.from({ length: 24 }, (_, i) => {
+      const angle = (i / 24) * Math.PI * 2;
+      const distance = 65 + (i * 37 % 85);
+      return <span className="confetti-piece" key={i} style={{ left: burst.x, top: burst.y,
+        "--dx": `${Math.cos(angle) * distance}px`, "--peak": `${-45 - Math.abs(Math.sin(angle)) * distance}px`,
+        "--fall": `${70 + i * 11 % 110}px`, "--spin": `${(i % 2 ? -1 : 1) * (180 + i * 31)}deg`,
+        "--confetti-color": ["var(--accent)", "#65BE9A", "#E6AC63", "#E38CA9", "#7EB8DE"][i % 5],
+        "--duration": `${800 + i % 5 * 65}ms`, borderRadius: i % 3 === 0 ? "50%" : 2 }} />;
+    })}
+  </div>;
+}
+
+function CalendarScreen({ classes, records, onToggle, onEdit, onDateChange }) {
+  const [viewMode, setViewMode] = useState(() => window.innerWidth < 640 ? "day" : "month");
+  const [selectedDate, setSelectedDate] = useState(todayISO());
+  const [cursor, setCursor] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() }));
+  useEffect(() => { onDateChange(selectedDate); }, [selectedDate, onDateChange]);
+  const today = todayISO();
+  const selected = dateFromISO(selectedDate);
+  const classesById = useMemo(() => Object.fromEntries(classes.map(c => [c.id,c])), [classes]);
+  const through = isoFromDate(new Date(cursor.year, cursor.month + 1, 7));
+  const tasks = useMemo(() => expandTasks(records, through > selectedDate ? through : shiftISO(selectedDate, 7)), [records, through, selectedDate]);
+  const byDate = useMemo(() => {
+    const grouped = {};
+    tasks.forEach(t => { if (t.dueDate) (grouped[t.dueDate] = grouped[t.dueDate] || []).push(t); });
+    Object.values(grouped).forEach(list => list.sort((a,b) => Number(a.done) - Number(b.done) || (a.time || "").localeCompare(b.time || "") || a.createdAt - b.createdAt));
+    return grouped;
+  }, [tasks]);
+  const selectDate = iso => { setSelectedDate(iso); const d = dateFromISO(iso); setCursor({year:d.getFullYear(),month:d.getMonth()}); };
+  const move = delta => {
+    if (viewMode !== "month") { selectDate(shiftISO(selectedDate, delta * (viewMode === "week" ? 7 : 1))); return; }
+    const d = new Date(cursor.year, cursor.month + delta, 1);
+    const day = Math.min(selected.getDate(), new Date(d.getFullYear(), d.getMonth()+1, 0).getDate());
+    selectDate(isoFromDate(new Date(d.getFullYear(), d.getMonth(), day)));
+  };
+  const weekStart = shiftISO(selectedDate, -selected.getDay());
+  const week = Array.from({length:7}, (_,i) => shiftISO(weekStart,i));
+  const first = new Date(cursor.year,cursor.month,1).getDay();
+  const days = new Date(cursor.year,cursor.month+1,0).getDate();
+  const monthCells = Array.from({length:first+days}, (_,i) => i < first ? null : isoFromDate(new Date(cursor.year,cursor.month,i-first+1)));
+  const heading = viewMode === "month" ? new Date(cursor.year,cursor.month,1).toLocaleDateString(undefined,{month:"long",year:"numeric"}) : viewMode === "week" ? `${dateFromISO(week[0]).toLocaleDateString(undefined,{month:"short",day:"numeric"})} – ${dateFromISO(week[6]).toLocaleDateString(undefined,{month:"short",day:"numeric"})}` : selected.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
+  const events = (iso, compact = false, dense = false) => (byDate[iso] || []).map(t => <CalendarEvent key={t.id} task={t} cls={classesById[t.classId]} onToggle={onToggle} onEdit={onEdit} compact={compact} dense={dense} />);
+  return <div className="screen calendar-screen" style={{maxWidth:760,margin:"0 auto",padding:"0 20px 100px"}}>
+    <header className="calendar-heading"><h1>Calendar</h1><SegmentedControl label="Calendar view" options={[["day", "Day"], ["week", "Week"], ["month", "Month"]]} value={viewMode} onChange={setViewMode} /></header>
+    <div className="calendar-controls"><button className="quiet-icon" aria-label="Previous" onClick={()=>move(-1)}><Icon name="chevron" size={18} style={{transform:"rotate(180deg)"}} /></button><button onClick={()=>selectDate(today)} aria-label={`${heading}. Go to today`}>{heading}</button><button className="quiet-icon" aria-label="Next" onClick={()=>move(1)}><Icon name="chevron" size={18} /></button></div>
+    <p className="calendar-hint">Hold an event to edit · Check to complete</p>
+    {viewMode === "month" && <div className="calendar-month">
+      <div className="month-labels">{["S","M","T","W","T","F","S"].map((label,i)=><span key={i}>{label}</span>)}</div>
+      <div className="month-cells">{monthCells.map((iso,i)=>iso ? <div key={iso} className="month-cell" data-selected={iso===selectedDate} data-today={iso===today}>
+        <button className="month-date" aria-label={dateFromISO(iso).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})} aria-pressed={iso===selectedDate} onClick={()=>selectDate(iso)}>{dateFromISO(iso).getDate()}<span className="month-dots" aria-hidden="true">{(byDate[iso]||[]).slice(0,3).map(t=><i key={t.id} style={{background:t.done?"var(--text-muted)":classesById[t.classId]?.color||"var(--accent)"}} />)}</span></button>
+        <div className="month-inline-events">{(byDate[iso]||[]).slice(0,2).map(t=><CalendarEvent key={t.id} task={t} cls={classesById[t.classId]} onToggle={onToggle} onEdit={onEdit} compact />)}{(byDate[iso]||[]).length>2 && <button className="more-events" onClick={()=>selectDate(iso)}>+{byDate[iso].length-2} more</button>}</div>
+      </div> : <div key={`empty-${i}`} />)}</div>
+    </div>}
+    {viewMode === "week" ? <div className="calendar-week">{week.map(iso=><section className="week-day" data-today={iso===today} key={iso}>
+      <button className="week-day-label" aria-label={`${dateFromISO(iso).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}${iso===today?", Today":""}`} onClick={()=>{selectDate(iso);setViewMode("day");}}><span>{dateFromISO(iso).toLocaleDateString(undefined,{weekday:"short"})}</span><strong>{dateFromISO(iso).getDate()}</strong></button>
+      <div className="week-events">{events(iso, false, true)}{!(byDate[iso]||[]).length && <p className="calendar-empty-day">Nothing scheduled</p>}</div>
+    </section>)}</div> : <section className="calendar-agenda" aria-label="Events for selected date">
+      {viewMode === "month" && <h2>{selectedDate === today ? "Today" : selected.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})}</h2>}
+      {events(selectedDate)}{!(byDate[selectedDate]||[]).length && <div className="calendar-empty"><Icon name="calendar" size={30}/><p>A little breathing room.</p><span>Tap + to add something for this day.</span></div>}
+    </section>}
+  </div>;
+}
+
 
 /* ---------- settings screen ---------- */
 
+function ColorThemePicker({ value, onChange }) {
+  return <section className="theme-section" aria-labelledby="color-theme-heading">
+    <h2 id="color-theme-heading">Color theme</h2>
+    <div className="theme-options" role="group" aria-label="Color theme">
+      {COLOR_THEMES.map(palette => <button type="button" className="theme-option" key={palette.key}
+        aria-label={`${palette.name} theme`} aria-pressed={value === palette.key} onClick={() => onChange(palette.key)}
+        style={{ "--swatch-light-accent": palette.light[0], "--swatch-light-soft": palette.light[1], "--swatch-dark-accent": palette.dark[0], "--swatch-dark-soft": palette.dark[1] }}>
+        <span className="theme-swatch" aria-hidden="true" />
+        <span className="theme-name">{palette.name}</span>
+        <span className="theme-selected" aria-hidden="true">{value === palette.key && <Icon name="check" size={14} />}</span>
+      </button>)}
+    </div>
+    <p className="theme-note">Soft gradients, in your color. Works with Light, Dark, and System.</p>
+  </section>;
+}
+
 function SettingsScreen({
-  theme, onThemeChange, classes, tasks, onReorder, onExport,
+  theme, onThemeChange, colorTheme, onColorThemeChange, classes, tasks, onReorder, onExport,
   syncCode, onCreateSync, onEnterSync, onDisconnectSync, syncStatus,
 }) {
   const totalTasks = tasks.length;
@@ -2151,7 +2899,7 @@ function SettingsScreen({
   }, [firebaseReady]);
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
+    <div className="screen" style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
       <div style={{ padding: "28px 0 22px" }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>Settings</h1>
       </div>
@@ -2164,7 +2912,7 @@ function SettingsScreen({
           {[["light", "sun", "Light"], ["dark", "moon", "Dark"], ["system", "monitor", "System"]].map(([key, icon, label]) => (
             <button key={key} onClick={() => onThemeChange(key)} style={{
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
-              padding: "10px 6px", borderRadius: 9, border: "none", cursor: "pointer",
+              padding: "10px 6px", borderRadius: "var(--radius-iphone)", border: "none", cursor: "pointer",
               background: theme === key ? "var(--bg)" : "transparent",
               color: theme === key ? "var(--text-primary)" : "var(--text-secondary)",
               fontWeight: theme === key ? 600 : 500, fontSize: 12.5,
@@ -2177,6 +2925,8 @@ function SettingsScreen({
           ))}
         </div>
       </div>
+
+      <ColorThemePicker value={colorTheme} onChange={onColorThemeChange} />
 
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>
@@ -2195,7 +2945,7 @@ function SettingsScreen({
               <div style={{
                 fontSize: 18, fontWeight: 700, letterSpacing: "0.02em",
                 fontFamily: "monospace", padding: "10px 12px", background: "var(--bg)",
-                borderRadius: 10, marginBottom: 10, textAlign: "center",
+                borderRadius: "var(--radius-iphone)", marginBottom: 10, textAlign: "center",
               }}>
                 {syncCode}
               </div>
@@ -2304,7 +3054,7 @@ function SettingsScreen({
 
 /* ---------- bottom nav ---------- */
 
-function NavBar({ tab, setTab, allCount }) {
+function NavBar({ tab, setTab }) {
   const items = [
     { key: "classes", label: "Classes", icon: "grid" },
     { key: "all", label: "All tasks", icon: "list" },
@@ -2312,25 +3062,27 @@ function NavBar({ tab, setTab, allCount }) {
     { key: "settings", label: "Settings", icon: "settings" },
   ];
   return (
-    <div style={{
+    <nav className="bottom-nav" aria-label="Main navigation" style={{
       position: "sticky", bottom: 0, left: 0, right: 0,
       display: "flex", justifyContent: "center",
       padding: "0 20px calc(20px + env(safe-area-inset-bottom, 0px))", pointerEvents: "none",
     }}>
-      <div style={{
+      <div className="nav-track" style={{
+        "--active-tab": Math.max(0, items.findIndex(item => item.key === tab)),
         display: "flex", gap: 2,
         background: "var(--surface-raised)",
         border: "1px solid var(--border)",
-        borderRadius: 20,
+        borderRadius: "var(--radius-iphone)",
         padding: 6,
         boxShadow: "var(--shadow-lift)",
         pointerEvents: "auto",
         backdropFilter: "blur(20px)",
       }}>
+        <div className="nav-pill" aria-hidden="true" />
         {items.map(item => (
-          <button key={item.key} onClick={() => setTab(item.key)} style={{
+          <button key={item.key} aria-label={item.label} aria-current={tab === item.key ? "page" : undefined} onClick={() => setTab(item.key)} style={{
             display: "flex", alignItems: "center", gap: 7,
-            padding: "10px 16px", borderRadius: 15, border: "none", cursor: "pointer",
+            padding: "10px 16px", borderRadius: "var(--radius-iphone)", border: "none", cursor: "pointer",
             background: tab === item.key ? "var(--text-primary)" : "transparent",
             color: tab === item.key ? "var(--bg)" : "var(--text-secondary)",
             fontSize: 13.5, fontWeight: 600,
@@ -2338,18 +3090,11 @@ function NavBar({ tab, setTab, allCount }) {
             position: "relative",
           }}>
             <Icon name={item.icon} size={17} />
-            <span style={{ display: window.innerWidth < 420 ? "none" : "inline" }}>{item.label}</span>
-            {item.key === "all" && allCount > 0 && tab !== "all" && (
-              <span style={{
-                position: "absolute", top: -2, right: -2,
-                width: 8, height: 8, borderRadius: "50%",
-                background: "#D6714E",
-              }} />
-            )}
+            <span>{item.label}</span>
           </button>
         ))}
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -2358,69 +3103,64 @@ function NavBar({ tab, setTab, allCount }) {
 /* ---------- undo toast ---------- */
 
 function UndoToast({ entry, onUndo, onDismiss }) {
-  if (!entry) return null;
-  return (
-    <div style={{
-      position: "fixed", left: "50%", bottom: "max(94px, 10vh)",
-      transform: "translateX(-50%)",
-      zIndex: 50,
-      animation: "riseInCenter 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
-    }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 12,
-        background: "var(--surface-raised)", border: "1px solid var(--border)",
-        borderRadius: 14, boxShadow: "var(--shadow-lift)",
-        padding: "10px 10px 10px 16px",
-        backdropFilter: "blur(20px)",
-      }}>
-        <span style={{ fontSize: 13.5, color: "var(--text-primary)", fontWeight: 500, whiteSpace: "nowrap" }}>
-          {entry.label}
-        </span>
-        <button onClick={onUndo} style={{
-          background: "none", border: "none", cursor: "pointer",
-          color: "var(--text-primary)", fontSize: 13.5, fontWeight: 700,
-          padding: "6px 10px", borderRadius: 8,
-        }}>
-          Undo
-        </button>
-        <button onClick={onDismiss} aria-label="Dismiss" style={{
-          background: "none", border: "none", cursor: "pointer",
-          color: "var(--text-muted)", padding: 6, borderRadius: 8, display: "flex",
-        }}>
-          <Icon name="x" size={14} />
-        </button>
-      </div>
+  const [shown, setShown] = useState(entry);
+  const [exiting, setExiting] = useState(false);
+  const exitTimer = useRef(null);
+  useEffect(() => {
+    clearTimeout(exitTimer.current);
+    if (entry) { setShown(entry); setExiting(false); return; }
+    if (!shown) return;
+    setExiting(true);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    exitTimer.current = setTimeout(() => setShown(null), reduced ? 0 : 220);
+    return () => clearTimeout(exitTimer.current);
+  }, [entry]);
+  if (!shown) return null;
+  const hasIcon = shown.label === "Task completed";
+  return <div key={shown.id || shown.label} className="undo-toast" data-exiting={exiting} role="status" style={{
+    position: "fixed", right: 24, bottom: "max(96px, 11vh)", zIndex: 50,
+    transformOrigin: "right bottom", animation: "toastRise 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
+  }}>
+    <div className="undo-toast-content" data-has-icon={hasIcon}>
+      {hasIcon && <span className="toast-check" aria-hidden="true"><Icon name="check" size={18} /></span>}
+      <span className="undo-message">{shown.label}</span>
+      <button className="undo-action" onClick={onUndo} disabled={exiting || !entry}>Undo</button>
+      <button className="undo-close" onClick={onDismiss} disabled={exiting || !entry} aria-label="Dismiss"><Icon name="x" size={16} /></button>
     </div>
-  );
+  </div>;
 }
 
-function FloatingAdd({ classes, activeClassId, onAdd }) {
+function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate }) {
   const [open, setOpen] = useState(false);
+  useSheet(open, () => setOpen(false));
   const [title, setTitle] = useState("");
-  const [classId, setClassId] = useState(activeClassId || (classes[0] && classes[0].id));
+  const [classId, setClassId] = useState(activeClassId || "");
   const [dueDate, setDueDate] = useState(tomorrowISO());
+  const [repeat, setRepeat] = useState("none");
+  const [repeatUntil, setRepeatUntil] = useState("");
+  const [time, setTime] = useState("");
+  const [notify, setNotify] = useState(false);
   const [pressed, setPressed] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
-    setClassId(activeClassId || (classes[0] && classes[0].id));
-  }, [activeClassId, classes]);
+    setClassId(activeClassId || "");
+  }, [activeClassId]);
 
   useEffect(() => {
     if (open && inputRef.current) setTimeout(() => inputRef.current.focus(), 60);
-    if (open) setDueDate(tomorrowISO());
+    if (open) { setDueDate(defaultDueDate || tomorrowISO()); setRepeat("none"); setRepeatUntil(""); setTime(""); setNotify(false); }
   }, [open]);
 
   const submit = () => {
     const trimmed = title.trim();
-    if (trimmed && classId) {
-      onAdd(classId, trimmed, dueDate || tomorrowISO());
+    if (trimmed && (!classId || classes.some(c => c.id === classId)) && validISO(dueDate) && !(repeat !== "none" && repeatUntil && repeatUntil < dueDate)) {
+      onAdd(classId, trimmed, dueDate || tomorrowISO(), { repeat, repeatUntil, time, notify: !!time && notify });
       setTitle("");
       setOpen(false);
     }
   };
 
-  if (classes.length === 0) return null;
 
   return (
     <>
@@ -2435,44 +3175,39 @@ function FloatingAdd({ classes, activeClassId, onAdd }) {
         />
       )}
       {open && (
-        <div style={{
+        <div className="mobile-sheet" role="dialog" aria-modal="true" aria-label="Add event or task" style={{
           position: "fixed", left: "50%", bottom: "max(100px, 12vh)",
           transform: "translateX(-50%)", width: "min(420px, calc(100vw - 40px))",
-          background: "var(--surface-raised)", borderRadius: 20,
+          background: "var(--surface-raised)", borderRadius: "var(--radius-iphone)",
           border: "1px solid var(--border)", boxShadow: "var(--shadow-lift)",
-          padding: 18, zIndex: 41,
+          padding: 18, zIndex: 41, maxHeight: "calc(100dvh - 140px)", overflowY: "auto",
           animation: "riseInCenter 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "var(--text-primary)" }}>
-            What do you need to do?
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>{classId ? "What do you need to do?" : "Add an event"}</div>
+            <button aria-label="Close add event" onClick={() => setOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "var(--bg)", color: "var(--text-primary)", borderRadius: "var(--radius-iphone)", padding: 10 }}><Icon name="x" size={18} /></button>
           </div>
           <input
             ref={inputRef}
             value={title}
             onChange={e => setTitle(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") submit(); if (e.key === "Escape") setOpen(false); }}
-            placeholder="Finish lab questions"
+            aria-label="Event title"
+            placeholder={classId ? "Finish lab questions" : "Appointment, birthday, or plans"}
             style={{
               width: "100%", border: "1.5px solid var(--border-strong)", borderRadius: "var(--radius-control)",
               padding: "11px 13px", fontSize: 15, outline: "none", background: "var(--bg)",
               color: "var(--text-primary)", fontFamily: "inherit", marginBottom: 12,
             }}
           />
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <select
-              value={classId}
-              onChange={e => setClassId(e.target.value)}
-              style={{
-                flex: 1, border: "1.5px solid var(--border-strong)", borderRadius: "var(--radius-control)",
-                padding: "9px 10px", fontSize: 13.5, background: "var(--bg)", color: "var(--text-primary)",
-                fontFamily: "inherit", outline: "none", minWidth: 0,
-              }}
-            >
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+          <div className="sheet-fields" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <RoundedSelect label="Calendar category" value={classId} onChange={setClassId} options={[["", "General event (no class)"], ...classes.map(c => [c.id,c.name])]} style={{flex: 1, minWidth: 0}} />
             <DatePickerButton value={dueDate} onChange={setDueDate} />
           </div>
-          <button onClick={submit} disabled={!title.trim()} style={{
+          <EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} />
+          <RepeatFields repeat={repeat} onRepeat={setRepeat} until={repeatUntil} onUntil={setRepeatUntil} startDate={dueDate} />
+          {repeat !== "none" && repeatUntil && repeatUntil < dueDate && <p className="editor-error" role="alert">Choose an end date on or after the first event.</p>}
+          <button onClick={submit} disabled={!title.trim() || !validISO(dueDate) || (repeat !== "none" && repeatUntil && repeatUntil < dueDate)} style={{
             width: "100%", padding: "10px 18px", borderRadius: "var(--radius-control)", border: "none",
             background: title.trim() ? "var(--text-primary)" : "var(--border)",
             color: title.trim() ? "var(--bg)" : "var(--text-muted)",
@@ -2483,10 +3218,10 @@ function FloatingAdd({ classes, activeClassId, onAdd }) {
           </button>
         </div>
       )}
-      <button
+      {!open && <button
         onClick={() => setOpen(o => !o)}
-        aria-label="Add task"
-        className="no-press"
+        aria-label="Add event or task"
+        className="no-press floating-add"
         style={{
           position: "fixed", right: 24, bottom: "max(96px, 11vh)",
           width: 54, height: 54, borderRadius: "50%",
@@ -2502,20 +3237,124 @@ function FloatingAdd({ classes, activeClassId, onAdd }) {
         onMouseLeave={() => setPressed(false)}
         onTouchStart={() => setPressed(true)}
         onTouchEnd={() => setPressed(false)}
+        onTouchCancel={() => setPressed(false)}
       >
         <Icon name="plus" size={24} />
-      </button>
+      </button>}
     </>
   );
 }
 
 /* ---------- root app ---------- */
 
+function useMobileViewport() {
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const update = () => {
+      const height = viewport ? viewport.height : window.innerHeight;
+      const inset = viewport ? Math.max(0, window.innerHeight - height - viewport.offsetTop) : 0;
+      document.documentElement.style.setProperty("--visual-height", `${height}px`);
+      document.documentElement.style.setProperty("--keyboard-inset", `${inset}px`);
+    };
+    update();
+    viewport?.addEventListener("resize", update);
+    viewport?.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => {
+      viewport?.removeEventListener("resize", update);
+      viewport?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+}
+
+let openSheetCount = 0;
+let sheetPreviousOverflow = "";
+
+function useSheet(open, onClose) {
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement;
+    if (openSheetCount === 0) sheetPreviousOverflow = document.body.style.overflow;
+    openSheetCount += 1;
+    document.body.dataset.sheetOpen = "true";
+    document.body.style.overflow = "hidden";
+    const escape = e => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", escape);
+    return () => {
+      openSheetCount = Math.max(0, openSheetCount - 1);
+      if (openSheetCount === 0) {
+        document.body.style.overflow = sheetPreviousOverflow;
+        delete document.body.dataset.sheetOpen;
+      }
+      document.removeEventListener("keydown", escape);
+      if (previous && previous.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, [open]);
+}
+
+function useAppHaptics() {
+  useEffect(() => {
+    const feedback = e => {
+      if (!e.isTrusted || !(e.target instanceof Element)) return;
+      const control = e.target.closest('button, summary, input[type="checkbox"], input[type="radio"]');
+      if (!control || control.matches(':disabled,[aria-disabled="true"]') || control.closest('.time-wheel')) return;
+      vibrate(control.matches('input[type="checkbox"]') ? 10 : 6);
+    };
+    document.addEventListener("click", feedback, true);
+    return () => document.removeEventListener("click", feedback, true);
+  }, []);
+}
+
+function useInputModality() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const pointer = () => { root.dataset.inputMode = "pointer"; };
+    const keyboard = e => { if (!e.metaKey && !e.ctrlKey && !e.altKey) root.dataset.inputMode = "keyboard"; };
+    document.addEventListener("pointerdown", pointer, true);
+    document.addEventListener("keydown", keyboard, true);
+    return () => {
+      document.removeEventListener("pointerdown", pointer, true);
+      document.removeEventListener("keydown", keyboard, true);
+    };
+  }, []);
+}
+
 function App() {
+  useMobileViewport();
+  useInputModality();
+  useAppHaptics();
   const initial = useRef(loadState()).current;
   const [classes, setClasses] = useState(initial.classes);
-  const [tasks, setTasks] = useState(initial.tasks);
+  const [records, setRecords] = useState(initial.tasks);
+  const recordsRef = useRef(initial.tasks);
+  const setTasks = useCallback(update => {
+    const next = typeof update === "function" ? update(recordsRef.current) : update;
+    recordsRef.current = next;
+    setRecords(next);
+  }, []);
+  const [currentDay, setCurrentDay] = useState(todayISO());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentDay(todayISO()), 30000);
+    return () => clearInterval(timer);
+  }, []);
+  const tasks = useMemo(() => {
+    const projected = expandTasks(records, shiftISO(currentDay, 366));
+    const next = {};
+    projected.forEach(t => {
+      if (t.seriesId && !t.done && t.dueDate > currentDay && (!next[t.seriesId] || t.dueDate < next[t.seriesId])) next[t.seriesId] = t.dueDate;
+    });
+    // Lists show overdue/current instances and the next scheduled instance per series.
+    // The calendar projects every occurrence for whichever dates are being viewed.
+    return projected.filter(t => !t.seriesId || t.done || t.dueDate <= currentDay || t.dueDate === next[t.seriesId]);
+  }, [records, currentDay]);
+  const [editingTask, setEditingTask] = useState(null);
+  const [calendarDate, setCalendarDate] = useState(todayISO());
+  const [burst, setBurst] = useState(null);
+  useEffect(() => { if (!burst) return; const timer = setTimeout(() => setBurst(null), 1200); return () => clearTimeout(timer); }, [burst]);
   const [theme, setTheme] = useState(initial.theme || "system");
+  const [colorTheme, setColorTheme] = useState(() => COLOR_THEMES.some(p => p.key === initial.colorTheme) ? initial.colorTheme : "lilac");
+  useEffect(() => { document.documentElement.dataset.palette = colorTheme; }, [colorTheme]);
   const [tab, setTab] = useState("classes");
   const [openClassId, setOpenClassId] = useState(null);
   const [syncCode, setSyncCode] = useState(() => {
@@ -2536,8 +3375,8 @@ function App() {
   }, [firebaseReadyTick]);
 
   useEffect(() => {
-    saveState({ classes, tasks, theme });
-  }, [classes, tasks, theme]);
+    saveState({ classes, tasks: records, theme, colorTheme });
+  }, [classes, records, theme, colorTheme]);
 
   // Push to cloud shortly after data changes, if synced
   useEffect(() => {
@@ -2547,12 +3386,12 @@ function App() {
     const t = setTimeout(() => {
       const stamp = Date.now();
       lastPushedAt.current = stamp;
-      pushToCloud(syncCode, { classes, tasks }, stamp)
+      pushToCloud(syncCode, { classes, tasks: records }, stamp)
         .then(() => setSyncStatus("saved"))
         .catch(() => setSyncStatus("error"));
     }, 500);
     return () => clearTimeout(t);
-  }, [classes, tasks, syncCode, firebaseReadyTick]);
+  }, [classes, records, syncCode, firebaseReadyTick]);
 
   // Stay live-connected to the cloud copy while synced, so changes made on
   // another device show up here within about a second — no refresh needed.
@@ -2576,10 +3415,10 @@ function App() {
     setSyncStatus("saving");
     const stamp = Date.now();
     lastPushedAt.current = stamp;
-    pushToCloud(code, { classes, tasks }, stamp)
+    pushToCloud(code, { classes, tasks: records }, stamp)
       .then(() => setSyncStatus("saved"))
       .catch(() => setSyncStatus("error"));
-  }, [classes, tasks]);
+  }, [classes, records]);
 
   const enterSync = useCallback((code) => {
     if (!code) return;
@@ -2622,64 +3461,71 @@ function App() {
     }
   }, [theme]);
 
-  const addTask = useCallback((classId, title, dueDate) => {
-    setTasks(t => [...t, { id: uid(), classId, title, done: false, dueDate: dueDate || tomorrowISO(), createdAt: Date.now() }]);
-  }, []);
+  const addTask = useCallback((classId, title, dueDate, options = {}) => {
+    setTasks(t => [...t, { id: uid(), classId, title, done: false, dueDate: dueDate || tomorrowISO(), createdAt: Date.now(), time: validEventTime(options.time) ? options.time : "", notify: validEventTime(options.time) && !!options.notify, repeat: options.repeat || "none", repeatUntil: options.repeatUntil || "", instances: {} }]);
+  }, [setTasks]);
 
   const [undoStack, setUndoStack] = useState([]);
   const undoTimerRef = useRef(null);
 
-  const pushUndo = useCallback((entry) => {
-    setUndoStack(s => [...s.slice(-2), entry]); // keep at most 3 queued, oldest drop off
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    undoTimerRef.current = setTimeout(() => {
-      setUndoStack(s => s.slice(1));
-    }, 4500);
+  useEffect(() => () => clearTimeout(undoTimerRef.current), []);
+  const pushUndo = useCallback(entry => {
+    setUndoStack([{ ...entry, id: uid() }]);
+    clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => setUndoStack([]), 2500);
   }, []);
 
   const dismissUndo = useCallback(() => {
-    setUndoStack(s => s.slice(1));
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoStack([]);
+    clearTimeout(undoTimerRef.current);
   }, []);
 
   const undoLast = useCallback(() => {
-    setUndoStack(s => {
-      const entry = s[0];
-      if (entry) entry.restore();
-      return s.slice(1);
-    });
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-  }, []);
+    const entry = undoStack[0];
+    if (entry) entry.restore();
+    setUndoStack([]);
+    clearTimeout(undoTimerRef.current);
+  }, [undoStack]);
 
-  const toggleTask = useCallback((taskId) => {
-    setTasks(t => {
-      const task = t.find(x => x.id === taskId);
-      const willComplete = task && !task.done;
-      if (willComplete) {
-        pushUndo({
-          label: "Task completed",
-          restore: () => setTasks(t2 => t2.map(x => x.id === taskId ? { ...x, done: false, completedAt: null } : x)),
-        });
+  const toggleTask = useCallback((taskId, origin) => {
+    const task = resolveTask(recordsRef.current, taskId);
+    if (!task || task.deleted) return;
+    const done = !task.done;
+    if (done) {
+      pushUndo({ label: "Task completed", restore: () => setTasks(t => patchTask(t, taskId, { done: false, completedAt: null })) });
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setBurst({ id: uid(), x: origin?.x ?? window.innerWidth / 2, y: origin?.y ?? window.innerHeight * .45 });
       }
-      return t.map(x => x.id === taskId
-        ? { ...x, done: !x.done, completedAt: !x.done ? Date.now() : null }
-        : x
-      );
-    });
-  }, [pushUndo]);
+    }
+    setTasks(t => patchTask(t, taskId, { done, completedAt: done ? Date.now() : null }));
+  }, [pushUndo, setTasks]);
 
-  const deleteTask = useCallback((taskId) => {
-    setTasks(t => {
-      const removed = t.find(x => x.id === taskId);
-      if (removed) {
-        pushUndo({
-          label: "Task deleted",
-          restore: () => setTasks(t2 => [...t2, removed]),
-        });
-      }
-      return t.filter(x => x.id !== taskId);
-    });
-  }, [pushUndo]);
+  const deleteTask = useCallback(taskId => {
+    const task = resolveTask(recordsRef.current, taskId);
+    if (!task) return;
+    if (task.seriesId) {
+      const previous = { ...(recordsRef.current.find(t => t.id === task.seriesId)?.instances || {})[task.occurrenceDate] };
+      pushUndo({ label: "Occurrence deleted", restore: () => setTasks(t => patchTask(t, taskId, { ...previous, deleted: false })) });
+      setTasks(t => patchTask(t, taskId, { deleted: true }));
+    } else {
+      pushUndo({ label: "Task deleted", restore: () => setTasks(t => t.some(x => x.id === task.id) ? t : [...t, task]) });
+      setTasks(t => t.filter(x => x.id !== taskId));
+    }
+  }, [pushUndo, setTasks]);
+
+  const deleteSeries = useCallback(task => {
+    const source = recordsRef.current.find(t => t.id === (task.seriesId || task.id));
+    if (!source) return;
+    pushUndo({ label: "Series deleted", restore: () => setTasks(t => t.some(x => x.id === source.id) ? t : [...t, source]) });
+    setTasks(t => t.filter(x => x.id !== source.id));
+  }, [pushUndo, setTasks]);
+
+  const editTask = useCallback((task, changes, scope) => {
+    const source = recordsRef.current.find(t => t.id === (task.seriesId || task.id));
+    if (!source) return;
+    setTasks(t => editTaskRecords(t, task, changes, scope));
+    pushUndo({ label: "Event updated", restore: () => setTasks(t => t.map(x => x.id === source.id ? source : x)) });
+  }, [pushUndo, setTasks]);
 
   const addClass = useCallback((name, category) => {
     const color = PALETTE[classes.length % PALETTE.length];
@@ -2729,7 +3575,7 @@ function App() {
   }, [pushUndo]);
 
   const exportData = useCallback(() => {
-    const data = JSON.stringify({ classes, tasks }, null, 2);
+    const data = JSON.stringify({ classes, tasks: records }, null, 2);
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -2737,10 +3583,9 @@ function App() {
     a.download = "classes-backup.json";
     a.click();
     URL.revokeObjectURL(url);
-  }, [classes, tasks]);
+  }, [classes, records]);
 
   const openClass = classes.find(c => c.id === openClassId);
-  const allActiveCount = tasks.filter(t => !t.done).length;
 
   let content;
   if (openClass) {
@@ -2749,7 +3594,7 @@ function App() {
         cls={openClass}
         tasks={tasks.filter(t => t.classId === openClass.id)}
         onBack={() => setOpenClassId(null)}
-        onAdd={(title, dueDate) => addTask(openClass.id, title, dueDate)}
+        onAdd={(title, dueDate, options) => addTask(openClass.id, title, dueDate, options)}
         onToggle={toggleTask}
         onDelete={deleteTask}
         onRename={(name) => renameClass(openClass.id, name)}
@@ -2760,13 +3605,13 @@ function App() {
   } else if (tab === "classes") {
     content = <Dashboard classes={classes} tasks={tasks} onOpenClass={setOpenClassId} onAddClass={addClass} onAddTask={addTask} onReorder={reorderClasses} onToggleTask={toggleTask} />;
   } else if (tab === "calendar") {
-    content = <CalendarScreen classes={classes} tasks={tasks} onToggle={toggleTask} onDelete={deleteTask} onOpenClass={setOpenClassId} />;
+    content = <CalendarScreen classes={classes} records={records} onToggle={toggleTask} onEdit={setEditingTask} onDateChange={setCalendarDate} />;
   } else if (tab === "all") {
-    content = <AllTasksScreen classes={classes} tasks={tasks} onToggle={toggleTask} onDelete={deleteTask} onOpenClass={setOpenClassId} />;
+    content = <AllTasksScreen classes={classes} tasks={tasks} onToggle={toggleTask} onDelete={deleteTask} onOpenClass={setOpenClassId} onEdit={setEditingTask} />;
   } else {
     content = (
       <SettingsScreen
-        theme={theme} onThemeChange={setTheme} classes={classes} tasks={tasks} onExport={exportData}
+        theme={theme} onThemeChange={setTheme} colorTheme={colorTheme} onColorThemeChange={setColorTheme} classes={classes} tasks={tasks} onExport={exportData}
         syncCode={syncCode} onCreateSync={createSync} onEnterSync={enterSync} onDisconnectSync={disconnectSync}
         syncStatus={syncStatus}
       />
@@ -2775,10 +3620,13 @@ function App() {
 
   return (
     <div id="app-shell" style={{ display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1 }}>{content}</div>
-      <NavBar tab={openClass ? "classes" : tab} setTab={(t) => { setOpenClassId(null); setTab(t); }} allCount={allActiveCount} />
-      <FloatingAdd classes={classes} activeClassId={openClass ? openClass.id : null} onAdd={addTask} />
+      <main key={openClass ? `class-${openClass.id}` : tab} className="screen-stage" style={{ flex: 1 }}>{content}</main>
+      <NavBar tab={openClass ? "classes" : tab} setTab={(t) => { setOpenClassId(null); setTab(t); }} />
+      <FloatingAdd classes={classes} activeClassId={openClass ? openClass.id : null} onAdd={addTask} defaultDueDate={tab === "calendar" ? calendarDate : null} />
       <UndoToast entry={undoStack[0] || null} onUndo={undoLast} onDismiss={dismissUndo} />
+      {editingTask && <EditTaskSheet task={editingTask} source={records.find(t => t.id === (editingTask.seriesId || editingTask.id)) || editingTask} classes={classes} onSave={editTask} onDelete={deleteTask} onDeleteSeries={deleteSeries} onClose={() => setEditingTask(null)} />}
+      <ReminderCenter records={records} />
+      <Confetti burst={burst} />
     </div>
   );
 }
