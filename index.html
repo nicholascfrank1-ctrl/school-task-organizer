@@ -48,7 +48,8 @@
     color-scheme: dark;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; }
+  html { min-height: 100%; }
+  body { min-height: 100vh; min-height: 100dvh; }
   #app-shell { min-height: 100vh; min-height: 100dvh; animation: appFadeIn 0.35s ease; }
   @keyframes appFadeIn { from { opacity: 0; } to { opacity: 1; } }
   body {
@@ -66,7 +67,7 @@
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
   }
-  #root { height: 100%; }
+  #root { min-height: 100vh; min-height: 100dvh; }
   button { font-family: inherit; }
   button:not(.no-press) {
     transition: transform 0.12s cubic-bezier(0.4,0,0.2,1), opacity 0.12s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
@@ -143,7 +144,15 @@
   /* A small motion system: quick feedback, gentle arrivals, no looping effects. */
   :root { --accent: #7772CE; --accent-soft: #EEEDF9; --ease-out: cubic-bezier(.22,1,.36,1); }
   [data-theme="dark"] { --accent: #B9B3FF; --accent-soft: #2B2940; }
-  body { background-image: radial-gradient(ellipse at 50% 0%, var(--accent-soft), transparent 530px); }
+  /* Paint one continuous backdrop over the full document, including long pages.
+     No repeating viewport-sized tiles or abrupt color reset while scrolling. */
+  body {
+    background-image:
+      radial-gradient(ellipse 110vw 760px at 50% 0%, var(--accent-soft) 0%, transparent 100%),
+      radial-gradient(ellipse 110vw 860px at 65% 100%, var(--accent-soft) 0%, transparent 100%);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+  }
   .screen-stage { animation: screenArrive .34s var(--ease-out) both; }
   @keyframes screenArrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   .class-list > div { animation: cardArrive .42s var(--ease-out) both; animation-delay: var(--arrival-delay, 0ms); }
@@ -657,6 +666,44 @@
   .notify-toggle input:checked::before { transform: translateY(-1px) rotate(45deg) scale(1); }
   @media (prefers-reduced-motion: reduce) { .notify-toggle input, .notify-toggle input::before { transition: none; } }
 
+
+  .event-kind-fields { display: grid; gap: 4px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .event-kind-fields .editor-hint { margin: 0; padding: 0 4px; }
+  .notify-toggle input.native-haptic-toggle { -webkit-appearance: auto; appearance: auto; display: inline-block; width: 38px; height: 24px; border: initial; border-radius: initial; background: initial; padding: 0; accent-color: var(--accent); }
+  .notify-toggle input.native-haptic-toggle::before { content: none; }
+  .quick-add-kind { grid-column: 1 / -1; grid-row: 2; margin-top: 10px; }
+  .quick-add-kind .event-kind-fields { margin-bottom: 0; padding-bottom: 10px; }
+  .quick-add.has-date > .date-control { grid-row: 3; }
+  .quick-add.has-date > .quick-repeat { grid-row: 4; }
+
+  /* Installed iPhone apps have no Safari toolbar: keep the dock closer to the home indicator. */
+  @media (display-mode: standalone) and (max-width: 639px),
+         (display-mode: standalone) and (max-width: 956px) and (max-height: 500px) {
+    :root { --installed-dock-gap: max(8px, calc(env(safe-area-inset-bottom, 0px) - 12px)); }
+    .bottom-nav { padding: 8px 12px var(--installed-dock-gap) !important; }
+    .floating-add, .undo-toast { bottom: calc(84px + var(--installed-dock-gap)) !important; }
+    .screen { padding-bottom: calc(168px + var(--installed-dock-gap)) !important; }
+  }
+
+
+  .account-section { margin: 0 0 24px; }
+  .account-section > h2 { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 10px; }
+  .account-card { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-iphone); box-shadow: var(--shadow); }
+  .account-card p { font-size: 13px; line-height: 1.6; color: var(--text-secondary); margin: 0 0 14px; }
+  .account-card > strong { display: block; font-size: 16px; line-height: 1.5; }
+  .account-email { display: block; color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; margin-bottom: 12px; }
+  .google-sign-in { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 12px; border: 1px solid #747775; border-radius: var(--radius-iphone); padding: 12px 18px; font: inherit; font-weight: 600; font-size: 14px; background: #fff; color: #1f1f1f; cursor: pointer; margin-bottom: 12px; }
+  .account-secondary { min-height: 44px; padding: 10px 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-iphone); background: var(--bg); color: var(--text-primary); font: inherit; font-size: 12px; cursor: pointer; }
+  .account-secondary:disabled { opacity: .45; cursor: default; }
+  .account-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .account-card .account-status { font-size: 12px; }
+  .account-import { padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-iphone); background: var(--bg); margin: 12px 0; }
+  .account-import button { width: 100%; margin-top: 8px; }
+  .legacy-recovery { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .legacy-recovery summary { cursor: pointer; font-size: 12px; color: var(--text-secondary); padding: 8px 0; }
+  .legacy-recovery input { width: 100%; min-height: 44px; padding: 12px 16px; border: 1px solid var(--border-strong); border-radius: var(--radius-iphone); background: var(--bg); color: var(--text-primary); font: inherit; margin-bottom: 10px; }
+  .account-loading { padding: 48px 24px; text-align: center; color: var(--text-secondary); }
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
@@ -666,7 +713,9 @@
   // Paste your Firebase config below (from the Firebase console: Project settings > your web app).
   // Leave firebaseConfig as null until you have it — sync will just be disabled until then.
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, getDocFromServer, onSnapshot, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAl7kbd8C9NNjBBYkQjz8rn8suldsOfDNg",
@@ -684,6 +733,31 @@
     db = getFirestore(app);
   }
 
+  const auth = getAuth(app);
+  try { await setPersistence(auth, browserLocalPersistence); } catch { /* The app can still use the current browser session. */ }
+  window.__accountAuth = {
+    subscribe: callback => onAuthStateChanged(auth, callback),
+    signIn: () => { const provider = new GoogleAuthProvider(); provider.setCustomParameters({prompt:"select_account"}); return signInWithPopup(auth, provider); },
+    signOut: () => signOut(auth),
+  };
+  window.__accountCloud = {
+    async read(uid) {
+      const snap = await getDocFromServer(doc(db,"users",uid,"planner","main"));
+      const data = snap.exists() ? snap.data() : null;
+      return {exists:snap.exists(),data,revision:data?.revision || 0};
+    },
+    async write(uid,data,revision) {
+      const ref = doc(db,"users",uid,"planner","main");
+      return runTransaction(db, async transaction => {
+        if (auth.currentUser?.uid !== uid) throw Object.assign(new Error("The account changed before saving. Your device copy was kept."),{code:"sync/account-changed"});
+        const current = await transaction.get(ref);
+        const version = current.exists() ? current.data().revision || 0 : 0;
+        if (version !== revision) throw Object.assign(new Error("Another device saved newer data."),{code:"sync/conflict"});
+        transaction.set(ref,{classes:data.classes,tasks:data.tasks,schemaVersion:1,revision:version+1,updatedAt:serverTimestamp()});
+        return version+1;
+      });
+    },
+  };
   window.__firebaseReady = !!db;
   window.__firestoreDoc = doc;
   window.__firestoreSetDoc = setDoc;
@@ -834,9 +908,10 @@ function loadState() {
   };
 }
 
-function saveState(state) {
+function saveState(state, key = STORAGE_KEY) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const previous = key === STORAGE_KEY ? {} : JSON.parse(localStorage.getItem(key) || "{}");
+    localStorage.setItem(key, JSON.stringify({...previous,...state}));
   } catch (e) {}
 }
 
@@ -958,6 +1033,220 @@ function subscribeToCloud(code, onData) {
     if (snap.exists()) onData(snap.data());
   }, () => {});
 }
+
+function validPlannerData(data) {
+  return !!data && Array.isArray(data.classes) && Array.isArray(data.tasks)
+    && data.classes.every(item => item && typeof item.id === "string" && typeof item.name === "string")
+    && data.tasks.every(item => item && typeof item.id === "string" && typeof item.title === "string");
+}
+function plannerData(data) {
+  if (!validPlannerData(data)) throw new Error("Saved data is incomplete. Your device copy has been kept.");
+  return JSON.parse(JSON.stringify({classes:data.classes,tasks:data.tasks}));
+}
+function plannerHash(data) { return JSON.stringify(plannerData(data)); }
+function hasPlannerData(data) { return validPlannerData(data) && !!(data.classes.length || data.tasks.length); }
+function accountCacheKey(uid) { return `classesApp.account.v1.${uid}`; }
+function mergePlannerData(account, device, makeId = uid) {
+  const merged = plannerData(account), local = plannerData(device), classIds = new Map();
+  const takenClasses = new Set(merged.classes.map(c=>c.id));
+  const freshClassId = () => { let id; do { id = makeId(); } while (takenClasses.has(id)); takenClasses.add(id); return id; };
+  local.classes.forEach(cls => {
+    const existing = merged.classes.find(c=>c.id === cls.id);
+    if (existing && JSON.stringify(existing) === JSON.stringify(cls)) { classIds.set(cls.id,cls.id); return; }
+    const id = existing ? freshClassId() : cls.id;
+    takenClasses.add(id); classIds.set(cls.id,id); merged.classes.push({...cls,id});
+  });
+  const taskIds = new Set(merged.tasks.map(t=>t.id));
+  local.tasks.forEach(task => {
+    const item = {...task,classId:classIds.get(task.classId) || task.classId || ""};
+    if (item.instances) item.instances = Object.fromEntries(Object.entries(item.instances).map(([date,patch])=>[date,{...patch,...(patch.classId ? {classId:classIds.get(patch.classId)||patch.classId} : {})}]));
+    const existing = merged.tasks.find(t=>t.id === item.id);
+    if (existing && JSON.stringify(existing) === JSON.stringify(item)) return;
+    if (existing) { do { item.id = makeId(); } while (taskIds.has(item.id)); }
+    taskIds.add(item.id); merged.tasks.push(item);
+  });
+  return merged;
+}
+function accountError(error) {
+  const code = error?.code || "";
+  if (code.includes("popup-closed") || code.includes("cancelled-popup")) return "Sign-in was cancelled. Your data is still on this device.";
+  if (code.includes("popup-blocked")) return "Allow the Google sign-in popup for this website, then try again.";
+  if (code.includes("unauthorized-domain")) return "This website address hasn't been enabled for Google sign-in yet.";
+  if (code.includes("operation-not-allowed") || code.includes("configuration-not-found")) return "Google sign-in needs to be enabled in Firebase before it can be used.";
+  if (code.includes("permission-denied")) return "Cloud saving was blocked by the database permissions. Your device copy is safe.";
+  if (code.includes("conflict")) return "Another device saved newer changes. Choose how to combine the copies before saving.";
+  if (code.includes("unavailable") || code.includes("network")) return "Couldn't reach cloud storage. Changes are kept on this device; use Retry when online.";
+  return error?.message || "Couldn't finish syncing. Your device copy has been kept.";
+}
+
+class AccountSyncController {
+  constructor({cloud,storage,readLocal,apply,onState}) {
+    Object.assign(this,{cloud,storage,readLocal,apply,onState});
+    this.generation=0; this.user=null; this.ready=false; this.baseline=""; this.revision=0; this.timer=null; this.writing=null; this.pending=null;
+  }
+  state(status,error="") { this.loading=status==="loading"; this.onState({user:this.user,status,error,loading:this.loading,storageKey:this.user ? accountCacheKey(this.user.uid) : STORAGE_KEY,pending:this.pending}); }
+  cache(data=this.readLocal()) { if (this.user) this.storage.setItem(accountCacheKey(this.user.uid),JSON.stringify({...plannerData(data),baseRevision:this.revision,dirty:plannerHash(data)!==this.baseline})); }
+  cached(key) { try { const data=JSON.parse(this.storage.getItem(key)||"null"); return validPlannerData(data) ? plannerData(data) : null; } catch { return null; } }
+  async connect(user) {
+    if (user && this.user?.uid===user.uid && this.ready) { await this.refresh(); return; }
+    clearTimeout(this.timer);
+    const previous=this.user;
+    if (previous) { try { this.cache(); } catch {} }
+    const generation=++this.generation;
+    this.user=user; this.ready=false; this.pending=null; this.writing=null;
+    if (!user) {
+      if (previous) this.apply(this.cached(STORAGE_KEY)||{classes:[],tasks:[]});
+      this.state("guest"); return;
+    }
+    this.state("loading");
+    const cache=this.cached(accountCacheKey(user.uid));
+    let dirtyCache=false;
+    try { dirtyCache=JSON.parse(this.storage.getItem(accountCacheKey(user.uid))||"{}").dirty===true; } catch {}
+    // Never show the previous user's data while switching accounts.
+    this.apply(cache||{classes:[],tasks:[]});
+    try {
+      const remote=await this.cloud.read(user.uid);
+      if (generation!==this.generation) return;
+      const conflict=remote.exists && cache && dirtyCache && plannerHash(cache)!==plannerHash(remote.data);
+      const data=conflict ? cache : remote.exists ? plannerData(remote.data) : cache||{classes:[],tasks:[]};
+      this.revision=remote.revision; this.baseline=plannerHash(remote.exists ? remote.data : {classes:[],tasks:[]});
+      if(conflict)this.pending={kind:"conflict",data:plannerData(remote.data),revision:remote.revision};
+      this.apply(data); this.cache(data); this.ready=true;
+      const guest=this.cached(STORAGE_KEY);
+      if (!this.pending && hasPlannerData(guest) && this.storage.getItem(`classesApp.importDecision.${user.uid}`)!=="done") this.pending={kind:"device",data:guest};
+      this.state(this.pending ? "import" : "saved");
+      if (!this.pending && plannerHash(data)!==this.baseline) this.schedule();
+    } catch(error) {
+      if(generation!==this.generation)return;
+      this.state("error",accountError(error));
+    }
+  }
+  changed() {
+    if(!this.user||this.loading)return;
+    try { this.cache(); } catch(error) { this.state("error","Device storage is full. Export your data before closing the app."); return; }
+    if(this.ready && !this.pending && plannerHash(this.readLocal())!==this.baseline)this.schedule();
+  }
+  schedule() { clearTimeout(this.timer); this.state("saving"); this.timer=setTimeout(()=>this.flush(),700); }
+  async flush() {
+    clearTimeout(this.timer);
+    if(!this.user||!this.ready||this.pending||this.writing)return false;
+    const data=plannerData(this.readLocal()), hash=plannerHash(data);
+    if(hash===this.baseline){this.state("saved");return true;}
+    const generation=this.generation, user=this.user;
+    const operation=this.cloud.write(user.uid,data,this.revision); this.writing=operation; this.state("saving");
+    try {
+      const revision=await operation;
+      if(generation!==this.generation)return false;
+      this.revision=revision; this.baseline=hash; this.writing=null; this.cache();
+      if(plannerHash(this.readLocal())!==hash)this.schedule(); else this.state("saved");
+      return true;
+    } catch(error) {
+      if(generation!==this.generation)return false;
+      this.writing=null;
+      if(error.code==="sync/conflict") {
+        try {
+          const remote=await this.cloud.read(user.uid);
+          if(generation!==this.generation)return false;
+          this.pending={kind:"conflict",data:remote.exists ? plannerData(remote.data) : {classes:[],tasks:[]},revision:remote.revision};
+        } catch {}
+      }
+      this.state("error",accountError(error)); return false;
+    }
+  }
+  async refresh() {
+    if(!this.user)return;
+    if(!this.ready){await this.connect(this.user);return;}
+    if(this.pending||this.writing)return;
+    if(plannerHash(this.readLocal())!==this.baseline){await this.flush();return;}
+    const generation=this.generation;
+    try {
+      const remote=await this.cloud.read(this.user.uid);
+      if(generation!==this.generation||this.pending||this.writing)return;
+      if(plannerHash(this.readLocal())!==this.baseline)return;
+      if(!remote.exists && this.revision>0){this.pending={kind:"conflict",data:{classes:[],tasks:[]},revision:0};this.state("error","The cloud copy is missing. Your device copy has been kept; choose how to restore it.");return;}
+      if(remote.exists&&remote.revision!==this.revision){this.revision=remote.revision;this.baseline=plannerHash(remote.data);this.apply(plannerData(remote.data));this.cache(remote.data);}
+      this.state("saved");
+    } catch(error){if(generation===this.generation)this.state("error",accountError(error));}
+  }
+  resolveImport(include) {
+    if(!this.pending)return;
+    const pending=this.pending, local=plannerData(this.readLocal());
+    this.pending=null;
+    if(pending.kind==="device") {
+      this.storage.setItem(`classesApp.importDecision.${this.user.uid}`,"done");
+      if(include){const merged=mergePlannerData(local,pending.data);this.apply(merged);this.cache(merged);}
+    } else {
+      this.revision=pending.revision;this.baseline=plannerHash(pending.data);
+      const data=include ? mergePlannerData(pending.data,local) : pending.data;
+      this.apply(data);this.cache(data);
+    }
+    this.schedule();
+    // Flush after React has applied the selected import or conflict resolution.
+  }
+  stop(){clearTimeout(this.timer);this.generation++;this.ready=false;}
+}
+
+function useGoogleAccount({classes,records,setClasses,setTasks}) {
+  const dataRef=useRef({classes,tasks:records}); dataRef.current={classes,tasks:records};
+  const controller=useRef(null);
+  const [state,setState]=useState({user:null,status:"guest",error:"",loading:false,storageKey:STORAGE_KEY,pending:null});
+  useEffect(()=>{
+    let unsubscribe=null, disposed=false;
+    const attach=()=>{
+      if(disposed||controller.current||!window.__accountAuth)return;
+      const engine=new AccountSyncController({cloud:window.__accountCloud,storage:localStorage,readLocal:()=>dataRef.current,apply:data=>{dataRef.current=data;setClasses(data.classes);setTasks(data.tasks);},onState:setState});
+      controller.current=engine;
+      unsubscribe=window.__accountAuth.subscribe(user=>engine.connect(user));
+    };
+    attach(); window.addEventListener("firebase-ready",attach);
+    const resume=()=>{if(document.visibilityState==="visible")controller.current?.refresh();};
+    const timer=setInterval(resume,30000);
+    document.addEventListener("visibilitychange",resume); window.addEventListener("online",resume);
+    return()=>{disposed=true;unsubscribe?.();controller.current?.stop();controller.current=null;clearInterval(timer);window.removeEventListener("firebase-ready",attach);document.removeEventListener("visibilitychange",resume);window.removeEventListener("online",resume);};
+  },[]);
+  useEffect(()=>{controller.current?.changed();},[classes,records]);
+  const signIn=()=>{
+    if(location.protocol==="file:"){setState(s=>({...s,error:"Google sign-in works on your published HTTPS website, not the local file preview."}));return;}
+    if(!window.__accountAuth){setState(s=>({...s,error:"Google sign-in hasn't loaded. Check your connection and try again."}));return;}
+    // Start the popup directly inside the tap, before any awaited work.
+    window.__accountAuth.signIn().catch(error=>setState(s=>({...s,error:accountError(error)})));
+  };
+  const signOut=async()=>{
+    try {
+      if(controller.current?.writing){setState(s=>({...s,error:"Please wait for the current save to finish before signing out."}));return;}
+      await controller.current?.flush();
+      await window.__accountAuth.signOut();
+    }catch(error){setState(s=>({...s,error:accountError(error)}));}
+  };
+  return {...state,signIn,signOut,retry:()=>controller.current?.refresh(),resolveImport:include=>controller.current?.resolveImport(include)};
+}
+
+function GoogleAccountPanel({account,onExport,onRecoverCode}) {
+  const [code,setCode]=useState(""),[recovering,setRecovering]=useState(false),[recoveryMessage,setRecoveryMessage]=useState("");
+  const labels={guest:"Saved on this device",loading:"Loading account…",saving:"Saving to your account…",saved:"Cloud is up to date",import:"Choose whether to add this device's data",error:"Changes are kept on this device"};
+  return <section className="account-section" aria-label="Account and saving">
+    <h2>Account & saving</h2><div className="account-card">
+      {account.user ? <>
+        <strong>{account.user.displayName||"Google account"}</strong><span className="account-email">{account.user.email}</span>
+        <p className="account-status" role="status">{labels[account.status]||labels.guest}</p>
+        {account.pending && <div className="account-import">
+          <p>{account.pending.kind==="device" ? "There are classes or events saved on this device. Add them to this account? Your account's current data will be kept." : "Another device saved changes while you were editing. Combine both copies, or load the cloud copy? Your device copy is backed up locally."}</p>
+          <button type="button" className="primary-action" onClick={()=>account.resolveImport(true)}>{account.pending.kind==="device"?"Add this device’s data":"Combine both copies"}</button>
+          <button type="button" className="account-secondary" onClick={()=>account.resolveImport(false)}>{account.pending.kind==="device"?"Keep account data only":"Load cloud copy"}</button>
+        </div>}
+        <div className="account-actions"><button type="button" className="account-secondary" disabled={account.loading||account.status==="saving"} onClick={account.retry}>Retry sync</button><button type="button" className="account-secondary" disabled={account.loading||account.status==="saving"} onClick={account.signOut}>Sign out</button></div>
+      </> : <>
+        <p>Sign in to save your classes, tasks, and calendar to your Google account and use them on another device.</p>
+        <button type="button" className="google-sign-in" onClick={account.signIn}><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.2H24v8h11c-.5 2.6-1.9 4.8-4.1 6.3v5.2h6.7c3.9-3.6 6-8.9 6-15.3Z"/><path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.9l-6.7-5.2c-1.8 1.2-4.1 1.9-6.8 1.9-5.3 0-9.8-3.6-11.4-8.4H5.7v5.4A20.4 20.4 0 0 0 24 44Z"/><path fill="#FBBC05" d="M12.6 27.4a12.3 12.3 0 0 1 0-7.8v-5.4H5.7a20.1 20.1 0 0 0 0 18.6l6.9-5.4Z"/><path fill="#EA4335" d="M24 11.2c3 0 5.6 1 7.7 3l5.8-5.8A19.3 19.3 0 0 0 24 3 20.4 20.4 0 0 0 5.7 14.2l6.9 5.4A12 12 0 0 1 24 11.2Z"/></svg>Continue with Google</button>
+        <p className="account-status">You can keep using the app without signing in. Guest data stays on this device.</p>
+      </>}
+      {account.error && <p className="editor-error" role="alert">{account.error}</p>}
+      <button type="button" className="account-secondary" onClick={onExport}>Export a backup</button>
+      <details className="legacy-recovery"><summary>Recover an old sync code</summary><p>Try to retrieve an existing backup. This won't create a new code or overwrite a backup.</p><input aria-label="Old sync code" value={code} onChange={e=>setCode(e.target.value)} placeholder="swift-tiger-42" autoCapitalize="none" spellCheck={false} /><button type="button" className="account-secondary" disabled={!code.trim()||recovering||account.loading} onClick={async()=>{setRecovering(true);setRecoveryMessage("");try{await onRecoverCode(code);setRecoveryMessage("Backup added. Existing items were kept.");}catch(error){setRecoveryMessage(accountError(error));}finally{setRecovering(false);}}}>{recovering?"Recovering…":"Recover backup"}</button>{recoveryMessage&&<p role="status">{recoveryMessage}</p>}</details>
+    </div>
+  </section>;
+}
+
 
 /* ---------- icons ---------- */
 
@@ -1150,7 +1439,7 @@ function formatEventTime(time) {
 function dueReminders(records, now) {
   const today = isoFromDate(now);
   return expandTasks(records, today).filter(task => {
-    if (!task.notify || task.done || task.deleted || task.dueDate !== today || !validEventTime(task.time)) return false;
+    if (!task.notify || (task.done && !task.autoCompleted) || task.deleted || task.dueDate !== today || !validEventTime(task.time)) return false;
     const [hours, minutes] = task.time.split(":").map(Number);
     const scheduled = dateFromISO(today); scheduled.setHours(hours, minutes, 0, 0);
     return scheduled.getTime() <= now.getTime();
@@ -1197,7 +1486,7 @@ function patchTask(records, id, patch) {
 }
 function editTaskRecords(records, task, changes, scope) {
   if (task.seriesId && scope === "occurrence") {
-    return patchTask(records, task.id, { title: changes.title, classId: changes.classId, dueDate: changes.dueDate, ...(changes.time !== undefined ? { time: changes.time } : {}), ...(typeof changes.notify === "boolean" ? { notify: changes.notify } : {}) });
+    return patchTask(records, task.id, { title: changes.title, classId: changes.classId, dueDate: changes.dueDate, ...(changes.time !== undefined ? { time: changes.time } : {}), ...(typeof changes.notify === "boolean" ? { notify: changes.notify } : {}), ...(typeof changes.isEvent === "boolean" ? { isEvent: changes.isEvent } : {}) });
   }
   return records.map(record => {
     if (record.id !== (task.seriesId || task.id)) return record;
@@ -1206,6 +1495,48 @@ function editTaskRecords(records, task, changes, scope) {
     if (changes.repeat === "none") instances = {};
     return { ...record, ...changes, instances, done: changes.repeat !== "none" ? false : record.done };
   });
+}
+
+function eventDeadline(task) {
+  if (!validISO(task.dueDate)) return null;
+  const date = dateFromISO(task.dueDate);
+  if (validEventTime(task.time)) {
+    const [hours, minutes] = task.time.split(":").map(Number);
+    date.setHours(hours, minutes, 0, 0);
+  } else date.setDate(date.getDate() + 1);
+  return date.getTime();
+}
+function isCalendarOnly(task) { return task.isEvent === true; }
+function eventCompletion(task, now) {
+  if (task.deleted) return task;
+  if (!isCalendarOnly(task)) return task.autoCompleted ? {...task,done:false,completedAt:null,autoCompleted:false} : task;
+  if (task.done && !task.autoCompleted) return task;
+  const deadline = eventDeadline(task);
+  if (deadline !== null && deadline <= now.getTime()) {
+    return task.done && task.autoCompleted && task.completedAt === deadline ? task : {...task,done:true,autoCompleted:true,completedAt:deadline};
+  }
+  return task.autoCompleted ? {...task,done:false,completedAt:null,autoCompleted:false} : task;
+}
+function autoCompleteEvents(records, now = new Date()) {
+  let changed = false;
+  const result = records.map(record => {
+    const relevant = record.isEvent || record.autoCompleted || Object.values(record.instances || {}).some(patch => patch.isEvent || patch.autoCompleted);
+    if (!relevant) return record;
+    if (!isRepeating(record)) {
+      const next = eventCompletion(record, now); if (next !== record) changed = true; return next;
+    }
+    let instances = record.instances || {};
+    let updated = false;
+    expandTasks([record], isoFromDate(now)).forEach(task => {
+      const next = eventCompletion(task, now);
+      if (next === task) return;
+      if (!updated) instances = {...instances};
+      updated = true; changed = true;
+      instances[task.occurrenceDate] = {...instances[task.occurrenceDate],done:next.done,autoCompleted:next.autoCompleted,completedAt:next.completedAt};
+    });
+    return updated ? {...record,instances} : record;
+  });
+  return changed ? result : records;
 }
 
 function computeStreak(tasks) {
@@ -1661,12 +1992,13 @@ function QuickAdd({ onAdd, placeholder, autoFocus, onCancel, withDate }) {
   const [repeatUntil, setRepeatUntil] = useState("");
   const [time, setTime] = useState("");
   const [notify, setNotify] = useState(false);
+  const [isEvent, setIsEvent] = useState(false);
   const inputRef = useRef(null);
   useEffect(() => { if (autoFocus) inputRef.current?.focus(); }, [autoFocus]);
   const submit = () => {
     const trimmed = value.trim();
     if (!trimmed || (withDate && (!validISO(dueDate) || (repeat !== "none" && repeatUntil && repeatUntil < dueDate)))) return;
-    if (withDate) { onAdd(trimmed, dueDate || tomorrowISO(), { repeat, repeatUntil, time, notify: !!time && notify }); setDueDate(tomorrowISO()); setRepeat("none"); setRepeatUntil(""); setTime(""); setNotify(false); }
+    if (withDate) { onAdd(trimmed, dueDate || tomorrowISO(), { repeat, repeatUntil, time, notify: !!time && notify, isEvent }); setDueDate(tomorrowISO()); setRepeat("none"); setRepeatUntil(""); setTime(""); setNotify(false); setIsEvent(false); }
     else onAdd(trimmed);
     setValue(""); inputRef.current?.focus();
   };
@@ -1676,6 +2008,7 @@ function QuickAdd({ onAdd, placeholder, autoFocus, onCancel, withDate }) {
       onKeyDown={e => { if (e.key === "Enter" && !e.nativeEvent.isComposing) submit(); if (e.key === "Escape") { setValue(""); onCancel?.(); } }}
       placeholder={placeholder || "What do you need to do?"} />
     <button type="button" className="quick-add-submit" aria-label="Add task" disabled={!value.trim() || (withDate && (!validISO(dueDate) || (repeat !== "none" && repeatUntil && repeatUntil < dueDate)))} onClick={submit}><Icon name="check" size={17} /></button>
+    {withDate && <div className="quick-add-kind"><EventKindFields isEvent={isEvent} onChange={setIsEvent} /></div>}
     {withDate && <DatePickerButton value={dueDate} onChange={setDueDate} />}
     {withDate && <div className="quick-repeat"><EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} /><RepeatFields compact repeat={repeat} onRepeat={setRepeat} until={repeatUntil} onUntil={setRepeatUntil} startDate={dueDate} />{repeat !== "none" && repeatUntil && repeatUntil < dueDate && <p className="editor-error" role="alert">End date must be on or after the first event.</p>}</div>}
   </div>;
@@ -2398,7 +2731,7 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass, onEdi
   const searchResults = useMemo(() => {
     if (!isSearching) return [];
     return tasks
-      .filter(t => t.title.toLowerCase().includes(trimmedQuery))
+      .filter(t => !isCalendarOnly(t)).filter(t => t.title.toLowerCase().includes(trimmedQuery))
       .sort((a, b) => {
         if (a.done !== b.done) return a.done ? 1 : -1;
         const ad = a.dueDate || "9999-99-99";
@@ -2412,7 +2745,7 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass, onEdi
     const groups = [...classes, { id: "", name: "General events", color: "var(--accent)" }]
       .map(c => {
         const items = tasks
-          .filter(t => (c.id ? t.classId === c.id : !t.classId) && !t.done)
+          .filter(t => !isCalendarOnly(t)).filter(t => (c.id ? t.classId === c.id : !t.classId) && !t.done)
           .sort((a, b) => {
             const ad = a.dueDate || "9999-99-99";
             const bd = b.dueDate || "9999-99-99";
@@ -2436,7 +2769,7 @@ function AllTasksScreen({ classes, tasks, onToggle, onDelete, onOpenClass, onEdi
   const importantTasks = useMemo(() => {
     const cutoff = tomorrowISO();
     return tasks
-      .filter(t => !t.done && t.dueDate && t.dueDate <= cutoff)
+      .filter(t => !isCalendarOnly(t)).filter(t => !t.done && t.dueDate && t.dueDate <= cutoff)
       .sort((a, b) => {
         const ad = a.dueDate || "9999-99-99";
         const bd = b.dueDate || "9999-99-99";
@@ -2616,13 +2949,20 @@ function EventTimePicker({ value, onChange }) {
   </details>;
 }
 
+function EventKindFields({ isEvent, onChange }) {
+  return <div className="event-kind-fields">
+    <label className="notify-toggle"><input type="checkbox" checked={isEvent} onChange={e => onChange(e.target.checked)} /><span>Make this an event</span></label>
+    <p className="editor-hint">{isEvent ? "Appears only in Calendar. Checks off automatically at its time, or at the end of the day for all-day events." : "Tasks appear in your class and All Tasks. Turn this on for lessons, meetings, or other calendar events."}</p>
+  </div>;
+}
+
 function EventTimeFields({ time, onTime, notify, onNotify }) {
   return <div className="event-time-fields">
     <div className="field-label"><span>Time <span className="field-optional">(optional)</span></span>
       <EventTimePicker value={time} onChange={onTime} />
     </div>
     {time && <button type="button" className="clear-event-time" onClick={() => { onTime(""); onNotify(false); }}>Make all-day</button>}
-    <label className="notify-toggle"><input type="checkbox" checked={!!time && notify} disabled={!time} onChange={e => onNotify(e.target.checked)} /><span>Remind me while the app is open</span></label>
+    <label className="notify-toggle"><input type="checkbox" switch="" className="native-haptic-toggle" checked={!!time && notify} disabled={!time} onChange={e => onNotify(e.target.checked)} /><span>Remind me while the app is open</span></label>
     <p className="editor-hint">{time ? "Reminders appear while this app is open. Background phone notifications aren't connected yet." : "Leave the time blank for an all-day event. Choose a time to enable an in-app reminder."}</p>
   </div>;
 }
@@ -2651,7 +2991,7 @@ function ReminderCenter({ records }) {
   useEffect(() => {
     if (!reminder) return;
     const current = resolveTask(records, reminder.id);
-    if (!current || current.done || current.deleted || !current.notify || current.time !== reminder.time || current.dueDate !== reminder.dueDate) setReminder(null);
+    if (!current || (current.done && !current.autoCompleted) || current.deleted || !current.notify || current.time !== reminder.time || current.dueDate !== reminder.dueDate) setReminder(null);
   }, [records, reminder]);
   if (!reminder) return null;
   return <aside className="event-reminder" role="alert" aria-label="Event reminder">
@@ -2747,12 +3087,12 @@ function CalendarEvent({ task, cls, onToggle, onEdit, onDelete, showDate = false
     onPointerDown={start} onPointerMove={move} onPointerUp={finish} onPointerCancel={cancel} onPointerLeave={cancel}
     onContextMenu={e => e.preventDefault()}>
     <label className="event-check-target" data-event-action="true">
-      <input type="checkbox" checked={!!task.done} onChange={toggle} aria-label={`${task.done ? "Mark incomplete" : "Complete"}: ${task.title}`} />
+      <input type="checkbox" checked={!!task.done} disabled={!!task.autoCompleted} onChange={toggle} aria-label={`${task.done ? "Mark incomplete" : "Complete"}: ${task.title}`} />
     </label>
     <div className="event-copy">
       {(compact || dense) && validEventTime(task.time) && <span className="event-time">{formatEventTime(task.time)}</span>}
       {compact || dense ? <button className="event-title-button" onClick={() => onEdit(task)} aria-label={`Edit ${task.title}`}>{task.title}</button> : <div className="event-title">{task.title}</div>}
-      {!compact && <div className="event-meta">{cls ? cls.name : "General event"}{showDate && task.dueDate ? ` · ${formatDueLabel(task.dueDate)}` : ""}{validEventTime(task.time) ? ` · ${formatEventTime(task.time)}` : ""}{task.notify && validEventTime(task.time) ? " · Reminder" : ""}{task.repeat && task.repeat !== "none" ? ` · ${repeatLabel(task.repeat)}` : ""}{task.done ? " · Completed" : ""}</div>}
+      {!compact && <div className="event-meta">{cls ? cls.name : "General event"}{showDate && task.dueDate ? ` · ${formatDueLabel(task.dueDate)}` : ""}{validEventTime(task.time) ? ` · ${formatEventTime(task.time)}` : ""}{task.notify && validEventTime(task.time) ? " · Reminder" : ""}{task.repeat && task.repeat !== "none" ? ` · ${repeatLabel(task.repeat)}` : ""}{task.isEvent ? " · Event" : ""}{task.done ? task.autoCompleted ? " · Finished" : " · Completed" : ""}</div>}
     </div>
     {!compact && !dense && <button className="event-edit" data-event-action="true" aria-label={`Edit ${task.title}`} onClick={() => onEdit(task)}><Icon name="edit" size={17} /></button>}
   </article>;
@@ -2768,16 +3108,17 @@ function EditTaskSheet({ task, source, classes, onSave, onDelete, onDeleteSeries
   const [until, setUntil] = useState(source.repeatUntil || "");
   const [time, setTime] = useState(task.time || "");
   const [notify, setNotify] = useState(!!task.notify);
+  const [isEvent, setIsEvent] = useState(!!task.isEvent);
   const inputRef = useRef(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
   const changeScope = value => {
     setScope(value);
     const values = value === "series" ? source : task;
-    setTitle(values.title); setClassId(values.classId || ""); setDueDate(values.dueDate); setTime(values.time || ""); setNotify(!!values.notify);
+    setTitle(values.title); setClassId(values.classId || ""); setDueDate(values.dueDate); setTime(values.time || ""); setNotify(!!values.notify); setIsEvent(!!values.isEvent);
   };
   const invalidEnd = repeat !== "none" && scope === "series" && until && until < dueDate;
   const canSave = title.trim() && (!classId || classes.some(c => c.id === classId)) && validISO(dueDate) && !invalidEnd;
-  const submit = e => { e.preventDefault(); if (canSave) { onSave(task, { title: title.trim(), classId, dueDate, time, notify: !!time && notify, repeat, repeatUntil: repeat === "none" ? "" : until }, scope); onClose(); } };
+  const submit = e => { e.preventDefault(); if (canSave) { onSave(task, { title: title.trim(), classId, dueDate, time, notify: !!time && notify, isEvent, repeat, repeatUntil: repeat === "none" ? "" : until }, scope); onClose(); } };
   return <>
     <div className="edit-backdrop" onClick={onClose} />
     <form className="mobile-sheet centered-sheet edit-sheet" role="dialog" aria-modal="true" aria-label="Edit event" onSubmit={submit}>
@@ -2786,6 +3127,7 @@ function EditTaskSheet({ task, source, classes, onSave, onDelete, onDeleteSeries
       <label className="field-label">Title<input ref={inputRef} required maxLength={500} value={title} onChange={e => setTitle(e.target.value)} /></label>
       <div className="field-label">Calendar category<RoundedSelect label="Calendar category" value={classId} onChange={setClassId} options={[["", "General event (no class)"], ...classes.map(c => [c.id,c.name])]} /></div>
       <label className="field-label">{task.seriesId && scope === "series" ? "Series starts" : "Date"}<input type="date" required value={dueDate} onChange={e => setDueDate(e.target.value)} /></label>
+      <EventKindFields isEvent={isEvent} onChange={setIsEvent} />
       <EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} />
       <RepeatFields repeat={repeat} onRepeat={setRepeat} until={until} onUntil={setUntil} startDate={dueDate} disabled={!!task.seriesId && scope === "occurrence"} />
       {task.seriesId && scope === "occurrence" && <p className="editor-hint">The rest of this series stays as scheduled. Choose “Entire series” to change the repeat schedule.</p>}
@@ -2883,7 +3225,7 @@ function ColorThemePicker({ value, onChange }) {
 
 function SettingsScreen({
   theme, onThemeChange, colorTheme, onColorThemeChange, classes, tasks, onReorder, onExport,
-  syncCode, onCreateSync, onEnterSync, onDisconnectSync, syncStatus,
+  onEnterSync, account,
 }) {
   const totalTasks = tasks.length;
   const totalDone = tasks.filter(t => t.done).length;
@@ -2928,99 +3270,7 @@ function SettingsScreen({
 
       <ColorThemePicker value={colorTheme} onChange={onColorThemeChange} />
 
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>
-          Sync across devices
-        </div>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", padding: 16, boxShadow: "var(--shadow)" }}>
-          {!firebaseReady ? (
-            <div style={{ fontSize: 13.5, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-              Sync isn't set up yet for this deployment.
-            </div>
-          ) : syncCode ? (
-            <div>
-              <div style={{ fontSize: 12.5, color: "var(--text-secondary)", marginBottom: 6 }}>
-                This device is synced with code
-              </div>
-              <div style={{
-                fontSize: 18, fontWeight: 700, letterSpacing: "0.02em",
-                fontFamily: "monospace", padding: "10px 12px", background: "var(--bg)",
-                borderRadius: "var(--radius-iphone)", marginBottom: 10, textAlign: "center",
-              }}>
-                {syncCode}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12, lineHeight: 1.4 }}>
-                Enter this code on another device's Settings to pull your classes and tasks there too.
-                {syncStatus === "saving" && " Syncing…"}
-                {syncStatus === "saved" && " Up to date."}
-                {syncStatus === "error" && " Couldn't reach the sync server."}
-              </div>
-              <button onClick={onDisconnectSync} style={{
-                width: "100%", padding: "9px 12px", borderRadius: "var(--radius-control)",
-                border: "1px solid var(--border-strong)", background: "var(--bg)",
-                color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer",
-              }}>
-                Disconnect this device
-              </button>
-            </div>
-          ) : enterMode ? (
-            <div>
-              <div style={{ fontSize: 12.5, color: "var(--text-secondary)", marginBottom: 8 }}>
-                Enter your sync code
-              </div>
-              <input
-                value={codeInput}
-                onChange={e => setCodeInput(e.target.value)}
-                placeholder="swift-tiger-42"
-                style={{
-                  width: "100%", border: "1.5px solid var(--border-strong)", borderRadius: "var(--radius-control)",
-                  padding: "10px 12px", fontSize: 14, outline: "none", background: "var(--bg)",
-                  color: "var(--text-primary)", fontFamily: "monospace", marginBottom: 10,
-                }}
-              />
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => setEnterMode(false)} style={{
-                  flex: 1, padding: "9px 12px", borderRadius: "var(--radius-control)",
-                  border: "1px solid var(--border-strong)", background: "var(--bg)",
-                  color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer",
-                }}>
-                  Cancel
-                </button>
-                <button onClick={() => { onEnterSync(codeInput.trim()); setEnterMode(false); }} disabled={!codeInput.trim()} style={{
-                  flex: 1, padding: "9px 12px", borderRadius: "var(--radius-control)", border: "none",
-                  background: codeInput.trim() ? "var(--text-primary)" : "var(--border)",
-                  color: codeInput.trim() ? "var(--bg)" : "var(--text-muted)",
-                  fontSize: 13, fontWeight: 600, cursor: codeInput.trim() ? "pointer" : "default",
-                }}>
-                  Sync this device
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <div style={{ fontSize: 13.5, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 12 }}>
-                Get a code to back up your data and pull it up on another device — like a school Chromebook.
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={onCreateSync} style={{
-                  flex: 1, padding: "9px 12px", borderRadius: "var(--radius-control)", border: "none",
-                  background: "var(--text-primary)", color: "var(--bg)",
-                  fontSize: 13, fontWeight: 600, cursor: "pointer",
-                }}>
-                  Create a sync code
-                </button>
-                <button onClick={() => setEnterMode(true)} style={{
-                  flex: 1, padding: "9px 12px", borderRadius: "var(--radius-control)",
-                  border: "1px solid var(--border-strong)", background: "var(--bg)",
-                  color: "var(--text-primary)", fontSize: 13, fontWeight: 500, cursor: "pointer",
-                }}>
-                  I have a code
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <GoogleAccountPanel account={account} onExport={onExport} onRecoverCode={onEnterSync} />
 
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>
@@ -3140,6 +3390,7 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate }) {
   const [repeatUntil, setRepeatUntil] = useState("");
   const [time, setTime] = useState("");
   const [notify, setNotify] = useState(false);
+  const [isEvent, setIsEvent] = useState(false);
   const [pressed, setPressed] = useState(false);
   const inputRef = useRef(null);
 
@@ -3149,13 +3400,13 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate }) {
 
   useEffect(() => {
     if (open && inputRef.current) setTimeout(() => inputRef.current.focus(), 60);
-    if (open) { setDueDate(defaultDueDate || tomorrowISO()); setRepeat("none"); setRepeatUntil(""); setTime(""); setNotify(false); }
+    if (open) { setDueDate(defaultDueDate || tomorrowISO()); setRepeat("none"); setRepeatUntil(""); setTime(""); setNotify(false); setIsEvent(false); }
   }, [open]);
 
   const submit = () => {
     const trimmed = title.trim();
     if (trimmed && (!classId || classes.some(c => c.id === classId)) && validISO(dueDate) && !(repeat !== "none" && repeatUntil && repeatUntil < dueDate)) {
-      onAdd(classId, trimmed, dueDate || tomorrowISO(), { repeat, repeatUntil, time, notify: !!time && notify });
+      onAdd(classId, trimmed, dueDate || tomorrowISO(), { repeat, repeatUntil, time, notify: !!time && notify, isEvent });
       setTitle("");
       setOpen(false);
     }
@@ -3204,6 +3455,7 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate }) {
             <RoundedSelect label="Calendar category" value={classId} onChange={setClassId} options={[["", "General event (no class)"], ...classes.map(c => [c.id,c.name])]} style={{flex: 1, minWidth: 0}} />
             <DatePickerButton value={dueDate} onChange={setDueDate} />
           </div>
+          <EventKindFields isEvent={isEvent} onChange={setIsEvent} />
           <EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} />
           <RepeatFields repeat={repeat} onRepeat={setRepeat} until={repeatUntil} onUntil={setRepeatUntil} startDate={dueDate} />
           {repeat !== "none" && repeatUntil && repeatUntil < dueDate && <p className="editor-error" role="alert">Choose an end date on or after the first event.</p>}
@@ -3324,22 +3576,28 @@ function App() {
   useMobileViewport();
   useInputModality();
   useAppHaptics();
-  const initial = useRef(loadState()).current;
-  const [classes, setClasses] = useState(initial.classes);
-  const [records, setRecords] = useState(initial.tasks);
-  const recordsRef = useRef(initial.tasks);
+  const initial = useRef(null);
+  if (!initial.current) { const saved = loadState(); initial.current = {...saved,tasks:autoCompleteEvents(saved.tasks)}; }
+  const initialState = initial.current;
+  const [classes, setClasses] = useState(initialState.classes);
+  const [records, setRecords] = useState(initialState.tasks);
+  const recordsRef = useRef(initialState.tasks);
   const setTasks = useCallback(update => {
-    const next = typeof update === "function" ? update(recordsRef.current) : update;
+    const next = autoCompleteEvents(typeof update === "function" ? update(recordsRef.current) : update);
     recordsRef.current = next;
     setRecords(next);
   }, []);
+  const account = useGoogleAccount({classes,records,setClasses,setTasks});
   const [currentDay, setCurrentDay] = useState(todayISO());
   useEffect(() => {
-    const timer = setInterval(() => setCurrentDay(todayISO()), 30000);
-    return () => clearInterval(timer);
+    const refresh = () => { setCurrentDay(todayISO()); setTasks(current => current); };
+    const timer = setInterval(refresh, 15000);
+    const resume = () => { if (document.visibilityState === "visible") refresh(); };
+    document.addEventListener("visibilitychange", resume);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", resume); };
   }, []);
   const tasks = useMemo(() => {
-    const projected = expandTasks(records, shiftISO(currentDay, 366));
+    const projected = expandTasks(records, shiftISO(currentDay, 366)).filter(task => !isCalendarOnly(task));
     const next = {};
     projected.forEach(t => {
       if (t.seriesId && !t.done && t.dueDate > currentDay && (!next[t.seriesId] || t.dueDate < next[t.seriesId])) next[t.seriesId] = t.dueDate;
@@ -3349,100 +3607,28 @@ function App() {
     return projected.filter(t => !t.seriesId || t.done || t.dueDate <= currentDay || t.dueDate === next[t.seriesId]);
   }, [records, currentDay]);
   const [editingTask, setEditingTask] = useState(null);
+  useEffect(() => { setEditingTask(null); setOpenClassId(null); }, [account.user?.uid]);
   const [calendarDate, setCalendarDate] = useState(todayISO());
   const [burst, setBurst] = useState(null);
   useEffect(() => { if (!burst) return; const timer = setTimeout(() => setBurst(null), 1200); return () => clearTimeout(timer); }, [burst]);
-  const [theme, setTheme] = useState(initial.theme || "system");
-  const [colorTheme, setColorTheme] = useState(() => COLOR_THEMES.some(p => p.key === initial.colorTheme) ? initial.colorTheme : "lilac");
+  const [theme, setTheme] = useState(initialState.theme || "system");
+  const [colorTheme, setColorTheme] = useState(() => COLOR_THEMES.some(p => p.key === initialState.colorTheme) ? initialState.colorTheme : "lilac");
   useEffect(() => { document.documentElement.dataset.palette = colorTheme; }, [colorTheme]);
   const [tab, setTab] = useState("classes");
   const [openClassId, setOpenClassId] = useState(null);
-  const [syncCode, setSyncCode] = useState(() => {
-    try { return localStorage.getItem(SYNC_CODE_KEY) || null; } catch (e) { return null; }
-  });
-  const [syncStatus, setSyncStatus] = useState(null);
-  const lastPushedAt = useRef(0);
-  const suppressNextRemoteApply = useRef(false);
-  const [firebaseReadyTick, setFirebaseReadyTick] = useState(isFirebaseReady());
-
-  // Firebase's setup script loads separately and can finish after this app
-  // has already mounted — this makes sure sync retries once it's actually ready.
   useEffect(() => {
-    if (firebaseReadyTick) return;
-    const handler = () => setFirebaseReadyTick(isFirebaseReady());
-    window.addEventListener("firebase-ready", handler);
-    return () => window.removeEventListener("firebase-ready", handler);
-  }, [firebaseReadyTick]);
+    if (!account.loading) saveState({ classes, tasks: records, theme, colorTheme }, account.storageKey);
+  }, [classes, records, theme, colorTheme, account.loading, account.storageKey]);
 
-  useEffect(() => {
-    saveState({ classes, tasks: records, theme, colorTheme });
-  }, [classes, records, theme, colorTheme]);
-
-  // Push to cloud shortly after data changes, if synced
-  useEffect(() => {
-    if (!syncCode || !isFirebaseReady()) return;
-    if (suppressNextRemoteApply.current) { suppressNextRemoteApply.current = false; return; }
-    setSyncStatus("saving");
-    const t = setTimeout(() => {
-      const stamp = Date.now();
-      lastPushedAt.current = stamp;
-      pushToCloud(syncCode, { classes, tasks: records }, stamp)
-        .then(() => setSyncStatus("saved"))
-        .catch(() => setSyncStatus("error"));
-    }, 500);
-    return () => clearTimeout(t);
-  }, [classes, records, syncCode, firebaseReadyTick]);
-
-  // Stay live-connected to the cloud copy while synced, so changes made on
-  // another device show up here within about a second — no refresh needed.
-  useEffect(() => {
-    if (!syncCode || !isFirebaseReady()) return;
-    const unsubscribe = subscribeToCloud(syncCode, (data) => {
-      // Ignore snapshots that are just an echo of our own most recent push
-      if (data.updatedAt && data.updatedAt <= lastPushedAt.current) return;
-      suppressNextRemoteApply.current = true;
-      setClasses(data.classes || []);
-      setTasks(data.tasks || []);
-      setSyncStatus("saved");
-    });
-    return unsubscribe;
-  }, [syncCode, firebaseReadyTick]);
-
-  const createSync = useCallback(() => {
-    const code = generateSyncCode();
-    setSyncCode(code);
-    try { localStorage.setItem(SYNC_CODE_KEY, code); } catch (e) {}
-    setSyncStatus("saving");
-    const stamp = Date.now();
-    lastPushedAt.current = stamp;
-    pushToCloud(code, { classes, tasks: records }, stamp)
-      .then(() => setSyncStatus("saved"))
-      .catch(() => setSyncStatus("error"));
-  }, [classes, records]);
-
-  const enterSync = useCallback((code) => {
-    if (!code) return;
-    setSyncStatus("saving");
-    pullFromCloud(code)
-      .then(data => {
-        if (data) {
-          suppressNextRemoteApply.current = true;
-          lastPushedAt.current = data.updatedAt || Date.now();
-          setClasses(data.classes || []);
-          setTasks(data.tasks || []);
-        }
-        setSyncCode(code);
-        try { localStorage.setItem(SYNC_CODE_KEY, code); } catch (e) {}
-        setSyncStatus("saved");
-      })
-      .catch(() => setSyncStatus("error"));
-  }, []);
-
-  const disconnectSync = useCallback(() => {
-    setSyncCode(null);
-    setSyncStatus(null);
-    try { localStorage.removeItem(SYNC_CODE_KEY); } catch (e) {}
-  }, []);
+  const enterSync = useCallback(async rawCode => {
+    const code = rawCode.trim().toLowerCase();
+    if (!/^[a-z]+-[a-z]+-\d{2}$/.test(code)) throw new Error("Enter the full backup code, such as swift-tiger-42.");
+    const recovered = await pullFromCloud(code);
+    if (!recovered) throw new Error("No backup was found for that code. Nothing was changed.");
+    if (!validPlannerData(recovered)) throw new Error("That backup is incomplete. Nothing was changed.");
+    const merged = mergePlannerData({classes,tasks:recordsRef.current}, recovered);
+    setClasses(merged.classes); setTasks(merged.tasks);
+  }, [classes,setTasks]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -3462,18 +3648,19 @@ function App() {
   }, [theme]);
 
   const addTask = useCallback((classId, title, dueDate, options = {}) => {
-    setTasks(t => [...t, { id: uid(), classId, title, done: false, dueDate: dueDate || tomorrowISO(), createdAt: Date.now(), time: validEventTime(options.time) ? options.time : "", notify: validEventTime(options.time) && !!options.notify, repeat: options.repeat || "none", repeatUntil: options.repeatUntil || "", instances: {} }]);
+    setTasks(t => [...t, { id: uid(), classId, title, done: false, dueDate: dueDate || tomorrowISO(), createdAt: Date.now(), isEvent: !!options.isEvent, time: validEventTime(options.time) ? options.time : "", notify: validEventTime(options.time) && !!options.notify, repeat: options.repeat || "none", repeatUntil: options.repeatUntil || "", instances: {} }]);
   }, [setTasks]);
 
   const [undoStack, setUndoStack] = useState([]);
   const undoTimerRef = useRef(null);
+  useEffect(() => { setUndoStack([]); clearTimeout(undoTimerRef.current); }, [account.user?.uid]);
 
   useEffect(() => () => clearTimeout(undoTimerRef.current), []);
   const pushUndo = useCallback(entry => {
-    setUndoStack([{ ...entry, id: uid() }]);
+    setUndoStack([{ ...entry, id: uid(), owner: account.user?.uid || "guest" }]);
     clearTimeout(undoTimerRef.current);
     undoTimerRef.current = setTimeout(() => setUndoStack([]), 2500);
-  }, []);
+  }, [account.user?.uid]);
 
   const dismissUndo = useCallback(() => {
     setUndoStack([]);
@@ -3482,10 +3669,10 @@ function App() {
 
   const undoLast = useCallback(() => {
     const entry = undoStack[0];
-    if (entry) entry.restore();
+    if (entry && entry.owner === (account.user?.uid || "guest")) entry.restore();
     setUndoStack([]);
     clearTimeout(undoTimerRef.current);
-  }, [undoStack]);
+  }, [undoStack, account.user?.uid]);
 
   const toggleTask = useCallback((taskId, origin) => {
     const task = resolveTask(recordsRef.current, taskId);
@@ -3612,20 +3799,19 @@ function App() {
     content = (
       <SettingsScreen
         theme={theme} onThemeChange={setTheme} colorTheme={colorTheme} onColorThemeChange={setColorTheme} classes={classes} tasks={tasks} onExport={exportData}
-        syncCode={syncCode} onCreateSync={createSync} onEnterSync={enterSync} onDisconnectSync={disconnectSync}
-        syncStatus={syncStatus}
+        account={account} onEnterSync={enterSync}
       />
     );
   }
 
   return (
     <div id="app-shell" style={{ display: "flex", flexDirection: "column" }}>
-      <main key={openClass ? `class-${openClass.id}` : tab} className="screen-stage" style={{ flex: 1 }}>{content}</main>
+      <main key={`${account.user?.uid || "guest"}:${openClass ? `class-${openClass.id}` : tab}`} className="screen-stage" style={{ flex: 1 }}>{account.loading ? <div className="account-loading" role="status">Loading your account…</div> : content}</main>
       <NavBar tab={openClass ? "classes" : tab} setTab={(t) => { setOpenClassId(null); setTab(t); }} />
-      <FloatingAdd classes={classes} activeClassId={openClass ? openClass.id : null} onAdd={addTask} defaultDueDate={tab === "calendar" ? calendarDate : null} />
-      <UndoToast entry={undoStack[0] || null} onUndo={undoLast} onDismiss={dismissUndo} />
-      {editingTask && <EditTaskSheet task={editingTask} source={records.find(t => t.id === (editingTask.seriesId || editingTask.id)) || editingTask} classes={classes} onSave={editTask} onDelete={deleteTask} onDeleteSeries={deleteSeries} onClose={() => setEditingTask(null)} />}
-      <ReminderCenter records={records} />
+      {!account.loading && <FloatingAdd key={account.user?.uid || "guest"} classes={classes} activeClassId={openClass ? openClass.id : null} onAdd={addTask} defaultDueDate={tab === "calendar" ? calendarDate : null} />}
+      <UndoToast key={account.user?.uid || "guest"} entry={undoStack[0]?.owner === (account.user?.uid || "guest") ? undoStack[0] : null} onUndo={undoLast} onDismiss={dismissUndo} />
+      {!account.loading && editingTask && <EditTaskSheet task={editingTask} source={records.find(t => t.id === (editingTask.seriesId || editingTask.id)) || editingTask} classes={classes} onSave={editTask} onDelete={deleteTask} onDeleteSeries={deleteSeries} onClose={() => setEditingTask(null)} />}
+      {!account.loading && <ReminderCenter key={account.user?.uid || "guest"} records={records} />}
       <Confetti burst={burst} />
     </div>
   );
