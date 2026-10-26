@@ -704,6 +704,38 @@
   .legacy-recovery input { width: 100%; min-height: 44px; padding: 12px 16px; border: 1px solid var(--border-strong); border-radius: var(--radius-iphone); background: var(--bg); color: var(--text-primary); font: inherit; margin-bottom: 10px; }
   .account-loading { padding: 48px 24px; text-align: center; color: var(--text-secondary); }
 
+
+  /* Compact entry, with optional scheduling kept out of the typing flow. */
+  .task-add-options { grid-column: 1 / -1; min-width: 0; margin: 8px 0; }
+  .task-options-heading { display: flex; align-items: center; gap: 8px; }
+  .task-options-heading .event-kind-fields { flex: 1; min-width: 0; margin: 0; padding: 0; border: 0; }
+  .task-options-heading .notify-toggle { margin: 0; padding: 4px 0; font-size: 14px; }
+  .task-options-toggle { display: flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--surface); color: var(--text-secondary); }
+  .task-options-content:not([hidden]) { display: grid; gap: 14px; border-top: 1px solid var(--border); margin-top: 10px; padding-top: 14px; animation: fadeIn .18s ease; }
+  .task-options-content[hidden] { display: none; }
+  .task-options-content > .date-control { min-width: 0; width: 100%; }
+  .task-options-content .event-time-fields { margin: 0; }
+  .task-options-content .sheet-fields { margin-bottom: 0 !important; }
+  .quick-add { scroll-margin-block: 100px; }
+  @media (pointer: coarse), (max-width: 639px) {
+    input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px !important; }
+    .quick-add > input { font-size: 16px !important; }
+  }
+
+
+  /* Keep color selection within a compact, thumb-friendly palette. */
+  .theme-options { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+  .theme-option { position: relative; min-height: 82px; padding: 10px 6px; flex-direction: column; justify-content: center; gap: 5px; border-radius: 24px; }
+  .theme-option .theme-swatch { flex: 0 0 30px; width: 30px; height: 30px; border-radius: 50%; }
+  .theme-name { flex: 0; font-size: 12px; line-height: 1.2; }
+  .theme-selected { position: absolute; top: 8px; right: 8px; width: 12px; }
+  .theme-note { font-size: 11px; margin-top: 10px; }
+  .class-color-picker { display: grid; gap: 10px; }
+  .class-color-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 4px; }
+  .class-color-choice { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 44px; height: 44px; padding: 4px; background: transparent; border: 0; border-radius: 16px; cursor: pointer; }
+  .class-color-dot { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--choice-color); color: var(--choice-ink); border: 1px solid var(--border-strong); transition: transform .16s ease, box-shadow .16s ease; }
+  .class-color-choice[aria-pressed="true"] .class-color-dot { box-shadow: 0 0 0 2px var(--surface),0 0 0 4px var(--accent); transform: scale(.94); }
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
@@ -2003,14 +2035,17 @@ function QuickAdd({ onAdd, placeholder, autoFocus, onCancel, withDate }) {
     setValue(""); inputRef.current?.focus();
   };
   return <div className={`quick-add ${withDate ? "has-date" : ""}`}>
-    <input ref={inputRef} aria-label={placeholder || "Task title"} value={value}
+    <input ref={inputRef} aria-label={placeholder || "Task title"} enterKeyHint="done" value={value}
       onChange={e => setValue(e.target.value)}
       onKeyDown={e => { if (e.key === "Enter" && !e.nativeEvent.isComposing) submit(); if (e.key === "Escape") { setValue(""); onCancel?.(); } }}
       placeholder={placeholder || "What do you need to do?"} />
     <button type="button" className="quick-add-submit" aria-label="Add task" disabled={!value.trim() || (withDate && (!validISO(dueDate) || (repeat !== "none" && repeatUntil && repeatUntil < dueDate)))} onClick={submit}><Icon name="check" size={17} /></button>
-    {withDate && <div className="quick-add-kind"><EventKindFields isEvent={isEvent} onChange={setIsEvent} /></div>}
-    {withDate && <DatePickerButton value={dueDate} onChange={setDueDate} />}
-    {withDate && <div className="quick-repeat"><EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} /><RepeatFields compact repeat={repeat} onRepeat={setRepeat} until={repeatUntil} onUntil={setRepeatUntil} startDate={dueDate} />{repeat !== "none" && repeatUntil && repeatUntil < dueDate && <p className="editor-error" role="alert">End date must be on or after the first event.</p>}</div>}
+    {withDate && <TaskAddOptions isEvent={isEvent} onChange={setIsEvent}>
+      <DatePickerButton value={dueDate} onChange={setDueDate} />
+      <EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} />
+      <RepeatFields compact repeat={repeat} onRepeat={setRepeat} until={repeatUntil} onUntil={setRepeatUntil} startDate={dueDate} />
+      {repeat !== "none" && repeatUntil && repeatUntil < dueDate && <p className="editor-error" role="alert">End date must be on or after the first event.</p>}
+    </TaskAddOptions>}
   </div>;
 }
 
@@ -2125,14 +2160,15 @@ function ClassCard({
       </div>
 
       <div style={{
-        maxHeight: expanded ? 520 : 0,
+        display: "grid",
+        gridTemplateRows: expanded ? "1fr" : "0fr",
         opacity: expanded ? 1 : 0,
-        transition: "max-height 0.24s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease",
+        transition: "grid-template-rows 0.24s ease, opacity 0.18s ease",
         overflow: "hidden",
       }}>
+        <div style={{ minHeight: 0, overflow: "hidden" }} inert={!expanded ? "" : undefined}>
         <div className="class-card-details">
           <QuickAdd
-            autoFocus={expanded}
             placeholder="Add a task"
             onAdd={onQuickAdd}
             withDate
@@ -2151,6 +2187,7 @@ function ClassCard({
           <button aria-label={`Move ${cls.name} down`} disabled={!onMoveDown} onClick={onMoveDown}><Icon name="chevron" size={16} style={{transform: "rotate(90deg)"}} /></button>
         </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -2181,39 +2218,22 @@ function ColorPackPicker({ selectedColor, onSelect }) {
   const [activePack, setActivePack] = useState(() => findPackForColor(selectedColor));
   const pack = COLOR_PACKS.find(p => p.key === activePack) || COLOR_PACKS[0];
 
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 4, marginBottom: 12, background: "var(--bg)", borderRadius: "var(--radius-iphone)", padding: 3 }}>
-        {COLOR_PACKS.map(p => (
-          <button key={p.key} onClick={() => setActivePack(p.key)} style={{
-            flex: 1, padding: "7px 6px", borderRadius: "var(--radius-iphone)", border: "none", cursor: "pointer",
-            background: activePack === p.key ? "var(--surface)" : "transparent",
-            color: activePack === p.key ? "var(--text-primary)" : "var(--text-secondary)",
-            fontWeight: activePack === p.key ? 700 : 500, fontSize: 12,
-            boxShadow: activePack === p.key ? "var(--shadow)" : "none",
-            transition: "all 0.15s ease",
-          }}>
-            {p.label}
-          </button>
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {pack.colors.map(c => {
-          const isVeryLight = isLightColor(c);
-          return (
-            <button key={c} onClick={() => onSelect(c)} style={{
-              width: 44, height: 44, borderRadius: "50%", background: c,
-              border: selectedColor === c
-                ? "2.5px solid var(--text-primary)"
-                : (isVeryLight ? "2.5px solid var(--border-strong)" : "2.5px solid transparent"),
-              boxShadow: selectedColor === c ? "0 0 0 2px var(--surface)" : "none",
-              cursor: "pointer", padding: 0,
-            }} aria-label={`Set color ${c}`} />
-          );
-        })}
-      </div>
+  return <div className="class-color-picker">
+    <RoundedSelect label="Color palette" value={activePack} onChange={setActivePack}
+      options={COLOR_PACKS.map(p => [p.key, p.label])} />
+    <div className="class-color-grid" role="group" aria-label={`${pack.label} accent colors`}>
+      {pack.colors.map(c => {
+        const selected = selectedColor === c;
+        const brightness = parseInt(c.slice(1,3),16)*.299 + parseInt(c.slice(3,5),16)*.587 + parseInt(c.slice(5,7),16)*.114;
+        return <button type="button" className="class-color-choice" key={c} onClick={() => onSelect(c)}
+          aria-label={`Set color ${c}`} aria-pressed={selected}
+          style={{"--choice-color":c,"--choice-ink":brightness > 150 ? "#171715" : "#FFFFFF"}}>
+          <span className="class-color-dot" aria-hidden="true">{selected && <Icon name="check" size={16} />}</span>
+        </button>;
+      })}
     </div>
-  );
+  </div>;
+
 }
 
 function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, onColorChange, onDeleteClass }) {
@@ -2461,7 +2481,7 @@ function AddItemSheet({ onAdd, onClose }) {
                 placeholder={`${selectedCat.label} name`}
                 style={{
                   flex: 1, border: "1.5px solid var(--border-strong)", borderRadius: "var(--radius-control)",
-                  padding: "10px 13px", fontSize: 15, outline: "none", background: "var(--bg)",
+                  padding: "10px 13px", fontSize: 16, outline: "none", background: "var(--bg)",
                   color: "var(--text-primary)", fontFamily: "inherit",
                 }}
               />
@@ -2952,7 +2972,20 @@ function EventTimePicker({ value, onChange }) {
 function EventKindFields({ isEvent, onChange }) {
   return <div className="event-kind-fields">
     <label className="notify-toggle"><input type="checkbox" checked={isEvent} onChange={e => onChange(e.target.checked)} /><span>Make this an event</span></label>
-    <p className="editor-hint">{isEvent ? "Appears only in Calendar. Checks off automatically at its time, or at the end of the day for all-day events." : "Tasks appear in your class and All Tasks. Turn this on for lessons, meetings, or other calendar events."}</p>
+  </div>;
+}
+
+function TaskAddOptions({ isEvent, onChange, children }) {
+  const [expanded, setExpanded] = useState(false);
+  const optionsId = React.useId();
+  return <div className="task-add-options">
+    <div className="task-options-heading">
+      <EventKindFields isEvent={isEvent} onChange={onChange} />
+      <button type="button" className="task-options-toggle" aria-label={expanded ? "Hide task options" : "Show task options"} aria-expanded={expanded} aria-controls={optionsId} onClick={() => setExpanded(value => !value)}>
+        <Icon name="chevron" size={17} style={{transform: expanded ? "rotate(-90deg)" : "rotate(90deg)", transition: "transform .2s ease"}} />
+      </button>
+    </div>
+    <div id={optionsId} className="task-options-content" hidden={!expanded}>{children}</div>
   </div>;
 }
 
@@ -3435,7 +3468,7 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate }) {
           animation: "riseInCenter 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>{classId ? "What do you need to do?" : "Add an event"}</div>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>"Add a task"</div>
             <button aria-label="Close add event" onClick={() => setOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "var(--bg)", color: "var(--text-primary)", borderRadius: "var(--radius-iphone)", padding: 10 }}><Icon name="x" size={18} /></button>
           </div>
           <input
@@ -3443,22 +3476,23 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate }) {
             value={title}
             onChange={e => setTitle(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") submit(); if (e.key === "Escape") setOpen(false); }}
-            aria-label="Event title"
+            aria-label="Event title" enterKeyHint="done"
             placeholder={classId ? "Finish lab questions" : "Appointment, birthday, or plans"}
             style={{
               width: "100%", border: "1.5px solid var(--border-strong)", borderRadius: "var(--radius-control)",
-              padding: "11px 13px", fontSize: 15, outline: "none", background: "var(--bg)",
+              padding: "11px 13px", fontSize: 16, outline: "none", background: "var(--bg)",
               color: "var(--text-primary)", fontFamily: "inherit", marginBottom: 12,
             }}
           />
+          <TaskAddOptions isEvent={isEvent} onChange={setIsEvent}>
           <div className="sheet-fields" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <RoundedSelect label="Calendar category" value={classId} onChange={setClassId} options={[["", "General event (no class)"], ...classes.map(c => [c.id,c.name])]} style={{flex: 1, minWidth: 0}} />
             <DatePickerButton value={dueDate} onChange={setDueDate} />
           </div>
-          <EventKindFields isEvent={isEvent} onChange={setIsEvent} />
           <EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} />
           <RepeatFields repeat={repeat} onRepeat={setRepeat} until={repeatUntil} onUntil={setRepeatUntil} startDate={dueDate} />
           {repeat !== "none" && repeatUntil && repeatUntil < dueDate && <p className="editor-error" role="alert">Choose an end date on or after the first event.</p>}
+          </TaskAddOptions>
           <button onClick={submit} disabled={!title.trim() || !validISO(dueDate) || (repeat !== "none" && repeatUntil && repeatUntil < dueDate)} style={{
             width: "100%", padding: "10px 18px", borderRadius: "var(--radius-control)", border: "none",
             background: title.trim() ? "var(--text-primary)" : "var(--border)",
@@ -3503,6 +3537,8 @@ function useMobileViewport() {
   useEffect(() => {
     const viewport = window.visualViewport;
     const update = () => {
+      // Pinch zoom changes the visual viewport too; it is not a keyboard resize.
+      if (viewport && viewport.scale > 1.01) return;
       const height = viewport ? viewport.height : window.innerHeight;
       const inset = viewport ? Math.max(0, window.innerHeight - height - viewport.offsetTop) : 0;
       document.documentElement.style.setProperty("--visual-height", `${height}px`);
