@@ -183,9 +183,8 @@
   .nav-track { position: relative; width: 460px; max-width: 100%; gap: 0 !important; isolation: isolate; }
   .nav-track > button { flex: 1; min-width: 0; justify-content: center; padding-left: 4px !important; padding-right: 4px !important; z-index: 1; background: transparent !important; }
   .nav-pill { position: absolute; z-index: 0; left: 6px; top: 6px; bottom: 6px; width: calc((100% - 12px) / 4); background: var(--text-primary); border-radius: var(--radius-iphone); transform: translateX(calc(var(--active-tab) * 100%)); transition: transform .38s cubic-bezier(.22,1,.36,1); pointer-events: none; }
-  .nav-track button[aria-current="page"] > svg { animation: navPop .3s var(--ease-out); }
   @keyframes navPop { from { transform: translateY(3px) scale(.85); } to { transform: none; } }
-  .floating-add { background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: 0 5px 18px var(--accent-glow), var(--shadow-lift) !important; animation: fabArrive .45s var(--ease-out) both; }
+  .floating-add { background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: 0 3px 8px rgba(0,0,0,.16) !important; animation: fabArrive .45s var(--ease-out) both; }
   [data-theme="dark"] .floating-add { color: var(--on-accent) !important; }
   @keyframes fabArrive { from { opacity: 0; translate: 0 12px; scale: .85; } to { opacity: 1; translate: 0; scale: 1; } }
   .quick-add:focus-within { border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-soft); transition: box-shadow .2s ease, border-color .2s ease; }
@@ -736,6 +735,83 @@
   .class-color-dot { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--choice-color); color: var(--choice-ink); border: 1px solid var(--border-strong); transition: transform .16s ease, box-shadow .16s ease; }
   .class-color-choice[aria-pressed="true"] .class-color-dot { box-shadow: 0 0 0 2px var(--surface),0 0 0 4px var(--accent); transform: scale(.94); }
 
+
+  /* Calm shadows and consistent motion; no stacked glow around primary actions. */
+  .nav-track { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+  .nav-track[data-dragging="true"] .nav-pill { transition: none; }
+  .nav-track[data-dragging="true"] > button { transition: color .1s ease; transform: none !important; }
+  .nav-track > button { transition: color .18s ease; }
+  .event-compact .event-title-button { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .month-cell { border-radius: 24px; }
+  button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-pill, .segment-pill, .nav-track > button { transition: none !important; }
+  }
+
+
+  /* One-tap due date without another form row. */
+  .task-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .task-title-row > input { flex: 1; min-width: 0; margin-bottom: 0 !important; }
+  .date-control.date-compact { width: 44px; height: 44px; flex: 0 0 44px; }
+  .date-compact .custom-date, .date-compact .native-date { position: relative; width: 44px; height: 44px; min-height: 44px; justify-content: center; padding: 0 !important; margin: 0; border: 0 !important; background: var(--surface) !important; color: var(--text-secondary); border-radius: 50%; }
+  .date-compact .custom-date > svg, .quick-add .date-compact .native-date > svg { display: block; width: 18px; height: 18px; }
+  .quick-add .date-compact .native-date::before { content: none; }
+  .date-compact .native-date input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; margin: 0; opacity: 0; cursor: pointer; }
+  .date-compact .native-date:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .quick-add.has-date { grid-template-columns: minmax(0,1fr) 44px 44px; }
+  .quick-add.has-date > .date-control.date-compact { grid-column: 2; grid-row: 1; margin: 0; padding: 0; border: 0; }
+  .quick-add.has-date > .quick-add-submit { grid-column: 3; }
+
+
+  /* The primary action morphs into Undo, anchored at the same right edge. */
+  .floating-add { overflow: hidden; white-space: nowrap; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+  .fab-plus, .fab-undo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transition: opacity .16s ease, transform .22s var(--ease-out); pointer-events: none; }
+  .fab-undo { opacity: 0; transform: translateX(8px); font: 600 15px var(--font-sans); }
+  .floating-add[data-undo="true"] .fab-plus { opacity: 0; transform: rotate(-90deg) scale(.6); }
+  .floating-add[data-undo="true"] .fab-undo { opacity: 1; transform: none; }
+  .sr-status { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+
+  /* Small month cells use one even rounded-square highlight, not nested pills. */
+  .month-date { border-radius: 12px; }
+  @media (max-width: 639px), (max-width: 956px) and (max-height: 500px) {
+    .calendar-month .month-cell { min-height: 48px; border-radius: 12px; }
+    .calendar-month .month-cell[data-selected="true"] { background: transparent; border: 0; }
+    .calendar-month .month-date { position: relative; height: 48px; min-height: 48px; padding: 0; gap: 3px; isolation: isolate; }
+    .calendar-month .month-cell[data-selected="true"] .month-date { background: transparent; color: var(--bg); }
+    .calendar-month .month-cell[data-selected="true"] .month-date::before {
+      content: ""; position: absolute; left: 50%; top: 50%; width: min(40px, 100%); aspect-ratio: 1;
+      transform: translate(-50%, -50%); border-radius: 12px; background: var(--text-primary); z-index: -1;
+    }
+    .month-day-number { line-height: 18px; font-variant-numeric: tabular-nums; }
+    .month-dots { min-height: 4px; align-items: center; }
+  }
+
+  .focus-event-count { display: flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--accent); font-size: 12px; font-weight: 600; }
+  .focus-event-count svg { flex-shrink: 0; }
+
+  /* A second ink layer is revealed only inside the moving glass pill. */
+  .nav-ink { position:absolute; inset:6px; z-index:2; display:flex; pointer-events:none; color:#171715; clip-path:inset(0 calc((3 - var(--active-tab)) * 25%) 0 calc(var(--active-tab) * 25%) round var(--radius-iphone)); transition:clip-path .38s cubic-bezier(.22,1,.36,1); }
+  .nav-ink-label { display:flex; flex:1; min-width:0; align-items:center; justify-content:center; gap:7px; padding:10px 4px; font-size:13.5px; font-weight:600; }
+  .nav-ink-label > svg { flex-shrink:0; display:block; }
+  .nav-track > button, .nav-ink-label { line-height:1.2; }
+  .nav-track > button:active { transform:none !important; }
+  .nav-track[data-dragging="true"] .nav-ink { transition:none; }
+  .nav-pill { background:#F2F1ED; box-shadow:0 1px 4px rgba(0,0,0,.09); }
+  @media (max-width:639px), (max-width:956px) and (max-height:500px) {
+    .nav-ink-label { flex-direction:column; gap:4px; padding:8px 4px; font-size:11px; }
+  }
+  @media (prefers-reduced-motion:reduce) { .nav-ink { transition:none; } }
+  :root[data-palette="white"]:not([data-theme="dark"]) { --accent:#555B64; --accent-soft:#F0F1F3; --bg:#FAFAFB; --surface:#FFFFFF; --surface-raised:#FFFFFF; --accent-glow:#555B6430; --on-accent:#FFFFFF; }
+  :root[data-palette="white"][data-theme="dark"] { --accent:#F0F1F4; --accent-soft:#303238; --bg:#191A1D; --surface:#232427; --surface-raised:#2B2C30; --accent-glow:#F0F1F430; --on-accent:#171715; }
+  :root[data-palette="black"]:not([data-theme="dark"]) { --accent:#25262B; --accent-soft:#E5E6E8; --bg:#F0F0F2; --surface:#FAFAFB; --surface-raised:#FFFFFF; --accent-glow:#25262B30; --on-accent:#FFFFFF; }
+  :root[data-palette="black"][data-theme="dark"] { --accent:#D2D4DA; --accent-soft:#18191D; --bg:#08090B; --surface:#121316; --surface-raised:#1B1C20; --accent-glow:#D2D4DA30; --on-accent:#171715; }
+  :root[data-palette="rainbow"]:not([data-theme="dark"]) { --accent:#7962C4; --accent-soft:#EEE8FA; --bg:#FCFAFF; --surface:#FFFFFF; --surface-raised:#FFFFFF; --accent-glow:#7962C430; --on-accent:#FFFFFF; }
+  :root[data-palette="rainbow"][data-theme="dark"] { --accent:#CAB9FF; --accent-soft:#302640; --bg:#18151E; --surface:#24202C; --surface-raised:#2D2737; --accent-glow:#CAB9FF30; --on-accent:#171715; }
+  .theme-option[data-color-theme="rainbow"] .theme-swatch { background-image:linear-gradient(135deg,#F0ACB5,#EDC993 25%,#B4D6BC 45%,#A9CDE8 65%,#C4A7E4 85%); }
+  :root[data-palette="rainbow"] body { background-image:radial-gradient(ellipse 100vw 800px at 0% 0%,var(--rainbow-rose),transparent 100%),radial-gradient(ellipse 100vw 1000px at 100% 40%,var(--rainbow-blue),transparent 100%),radial-gradient(ellipse 110vw 900px at 20% 100%,var(--rainbow-mint),transparent 100%); }
+  :root[data-palette="rainbow"] { --rainbow-rose:#F3DDEB; --rainbow-blue:#DEE8FA; --rainbow-mint:#DFF0E9; }
+  :root[data-palette="rainbow"][data-theme="dark"] { --rainbow-rose:#382439; --rainbow-blue:#203447; --rainbow-mint:#213C35; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
@@ -747,7 +823,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import { getFirestore, doc, setDoc, getDoc, getDocFromServer, onSnapshot, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-  import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import { getAuth, onAuthStateChanged, setPersistence, indexedDBLocalPersistence, browserLocalPersistence, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAl7kbd8C9NNjBBYkQjz8rn8suldsOfDNg",
@@ -766,10 +842,21 @@
   }
 
   const auth = getAuth(app);
-  try { await setPersistence(auth, browserLocalPersistence); } catch { /* The app can still use the current browser session. */ }
+  // Restore an existing account before rendering guest mode. Prefer durable
+  // IndexedDB, while retaining localStorage as a persistent fallback.
+  let persistenceError = null;
+  try { await setPersistence(auth, indexedDBLocalPersistence); }
+  catch {
+    try { await setPersistence(auth, browserLocalPersistence); }
+    catch (error) { persistenceError = error; }
+  }
+  await auth.authStateReady();
   window.__accountAuth = {
     subscribe: callback => onAuthStateChanged(auth, callback),
-    signIn: () => { const provider = new GoogleAuthProvider(); provider.setCustomParameters({prompt:"select_account"}); return signInWithPopup(auth, provider); },
+    signIn: () => {
+      if (persistenceError) return Promise.reject(Object.assign(new Error("This browser cannot keep you signed in. Allow website storage, or open the site in a regular Safari tab."),{code:"auth/persistence-unavailable"}));
+      const provider = new GoogleAuthProvider(); provider.setCustomParameters({prompt:"select_account"}); return signInWithPopup(auth, provider);
+    },
     signOut: () => signOut(auth),
   };
   window.__accountCloud = {
@@ -785,7 +872,7 @@
         const current = await transaction.get(ref);
         const version = current.exists() ? current.data().revision || 0 : 0;
         if (version !== revision) throw Object.assign(new Error("Another device saved newer data."),{code:"sync/conflict"});
-        transaction.set(ref,{classes:data.classes,tasks:data.tasks,schemaVersion:1,revision:version+1,updatedAt:serverTimestamp()});
+        transaction.set(ref,{classes:data.classes,tasks:data.tasks,...(data.theme ? {theme:data.theme} : {}),...(data.colorTheme ? {colorTheme:data.colorTheme} : {}),schemaVersion:1,revision:version+1,updatedAt:serverTimestamp()});
         return version+1;
       });
     },
@@ -921,6 +1008,60 @@ const COLOR_THEMES = [
       "#191C22",
       "#232831",
       "#2B313C"
+    ]
+  },
+  {
+    "key": "white",
+    "name": "White",
+    "light": [
+      "#555B64",
+      "#F0F1F3",
+      "#FAFAFB",
+      "#FFFFFF",
+      "#FFFFFF"
+    ],
+    "dark": [
+      "#F0F1F4",
+      "#303238",
+      "#191A1D",
+      "#232427",
+      "#2B2C30"
+    ]
+  },
+  {
+    "key": "black",
+    "name": "Black",
+    "light": [
+      "#25262B",
+      "#E5E6E8",
+      "#F0F0F2",
+      "#FAFAFB",
+      "#FFFFFF"
+    ],
+    "dark": [
+      "#D2D4DA",
+      "#18191D",
+      "#08090B",
+      "#121316",
+      "#1B1C20"
+    ]
+  },
+  {
+    "key": "rainbow",
+    "name": "Rainbow",
+    "light": [
+      "#7962C4",
+      "#EEE8FA",
+      "#FCFAFF",
+      "#FFFFFF",
+      "#FFFFFF"
+    ],
+    "dark": [
+      "#CAB9FF",
+      "#302640",
+      "#18151E",
+      "#24202C",
+      "#2D2737"
     ]
   }
 ];
@@ -1071,15 +1212,24 @@ function validPlannerData(data) {
     && data.classes.every(item => item && typeof item.id === "string" && typeof item.name === "string")
     && data.tasks.every(item => item && typeof item.id === "string" && typeof item.title === "string");
 }
+function plannerPreferences(data) {
+  const preferences = {};
+  if (["system", "light", "dark"].includes(data?.theme)) preferences.theme = data.theme;
+  if (COLOR_THEMES.some(palette => palette.key === data?.colorTheme)) preferences.colorTheme = data.colorTheme;
+  return preferences;
+}
+function plannerWithPreferences(data, fallback) {
+  return {...plannerData(data), ...plannerPreferences(fallback), ...plannerPreferences(data)};
+}
 function plannerData(data) {
   if (!validPlannerData(data)) throw new Error("Saved data is incomplete. Your device copy has been kept.");
-  return JSON.parse(JSON.stringify({classes:data.classes,tasks:data.tasks}));
+  return JSON.parse(JSON.stringify({classes:data.classes,tasks:data.tasks,...plannerPreferences(data)}));
 }
 function plannerHash(data) { return JSON.stringify(plannerData(data)); }
 function hasPlannerData(data) { return validPlannerData(data) && !!(data.classes.length || data.tasks.length); }
 function accountCacheKey(uid) { return `classesApp.account.v1.${uid}`; }
 function mergePlannerData(account, device, makeId = uid) {
-  const merged = plannerData(account), local = plannerData(device), classIds = new Map();
+  const merged = plannerWithPreferences(account, device), local = plannerData(device), classIds = new Map();
   const takenClasses = new Set(merged.classes.map(c=>c.id));
   const freshClassId = () => { let id; do { id = makeId(); } while (takenClasses.has(id)); takenClasses.add(id); return id; };
   local.classes.forEach(cls => {
@@ -1100,6 +1250,7 @@ function mergePlannerData(account, device, makeId = uid) {
   return merged;
 }
 function accountError(error) {
+  if (error?.code === "auth/persistence-unavailable") return error.message;
   const code = error?.code || "";
   if (code.includes("popup-closed") || code.includes("cancelled-popup")) return "Sign-in was cancelled. Your data is still on this device.";
   if (code.includes("popup-blocked")) return "Allow the Google sign-in popup for this website, then try again.";
@@ -1132,15 +1283,16 @@ class AccountSyncController {
     }
     this.state("loading");
     const cache=this.cached(accountCacheKey(user.uid));
+    const preferences={...plannerPreferences(this.cached(STORAGE_KEY)),...plannerPreferences(cache)};
     let dirtyCache=false;
     try { dirtyCache=JSON.parse(this.storage.getItem(accountCacheKey(user.uid))||"{}").dirty===true; } catch {}
     // Never show the previous user's data while switching accounts.
-    this.apply(cache||{classes:[],tasks:[]});
+    this.apply(plannerWithPreferences(cache||{classes:[],tasks:[]},preferences));
     try {
       const remote=await this.cloud.read(user.uid);
       if (generation!==this.generation) return;
       const conflict=remote.exists && cache && dirtyCache && plannerHash(cache)!==plannerHash(remote.data);
-      const data=conflict ? cache : remote.exists ? plannerData(remote.data) : cache||{classes:[],tasks:[]};
+      const data=plannerWithPreferences(conflict ? cache : remote.exists ? remote.data : cache||{classes:[],tasks:[]},preferences);
       this.revision=remote.revision; this.baseline=plannerHash(remote.exists ? remote.data : {classes:[],tasks:[]});
       if(conflict)this.pending={kind:"conflict",data:plannerData(remote.data),revision:remote.revision};
       this.apply(data); this.cache(data); this.ready=true;
@@ -1196,7 +1348,7 @@ class AccountSyncController {
       if(generation!==this.generation||this.pending||this.writing)return;
       if(plannerHash(this.readLocal())!==this.baseline)return;
       if(!remote.exists && this.revision>0){this.pending={kind:"conflict",data:{classes:[],tasks:[]},revision:0};this.state("error","The cloud copy is missing. Your device copy has been kept; choose how to restore it.");return;}
-      if(remote.exists&&remote.revision!==this.revision){this.revision=remote.revision;this.baseline=plannerHash(remote.data);this.apply(plannerData(remote.data));this.cache(remote.data);}
+      if(remote.exists&&remote.revision!==this.revision){this.revision=remote.revision;this.baseline=plannerHash(remote.data);const restored=plannerWithPreferences(remote.data,this.readLocal());this.apply(restored);this.cache(restored);}
       this.state("saved");
     } catch(error){if(generation===this.generation)this.state("error",accountError(error));}
   }
@@ -1209,7 +1361,7 @@ class AccountSyncController {
       if(include){const merged=mergePlannerData(local,pending.data);this.apply(merged);this.cache(merged);}
     } else {
       this.revision=pending.revision;this.baseline=plannerHash(pending.data);
-      const data=include ? mergePlannerData(pending.data,local) : pending.data;
+      const data=include ? mergePlannerData(pending.data,local) : plannerWithPreferences(pending.data,local);
       this.apply(data);this.cache(data);
     }
     this.schedule();
@@ -1218,25 +1370,29 @@ class AccountSyncController {
   stop(){clearTimeout(this.timer);this.generation++;this.ready=false;}
 }
 
-function useGoogleAccount({classes,records,setClasses,setTasks}) {
-  const dataRef=useRef({classes,tasks:records}); dataRef.current={classes,tasks:records};
+function useGoogleAccount({classes,records,theme,colorTheme,setClasses,setTasks,setTheme,setColorTheme}) {
+  const dataRef=useRef({classes,tasks:records,theme,colorTheme}); dataRef.current={classes,tasks:records,theme,colorTheme};
   const controller=useRef(null);
-  const [state,setState]=useState({user:null,status:"guest",error:"",loading:false,storageKey:STORAGE_KEY,pending:null});
+  const [state,setState]=useState({user:null,status:location.protocol === "file:" ? "guest" : "loading",error:"",loading:location.protocol !== "file:",storageKey:STORAGE_KEY,pending:null});
   useEffect(()=>{
     let unsubscribe=null, disposed=false;
+    const startupTimer=setTimeout(()=>{
+      if (!disposed && !controller.current) setState(s=>({...s,status:"guest",loading:false,error:"Account connection is taking longer than expected. Your device data is available; reconnect to restore sign-in."}));
+    },12000);
     const attach=()=>{
       if(disposed||controller.current||!window.__accountAuth)return;
-      const engine=new AccountSyncController({cloud:window.__accountCloud,storage:localStorage,readLocal:()=>dataRef.current,apply:data=>{dataRef.current=data;setClasses(data.classes);setTasks(data.tasks);},onState:setState});
+      const engine=new AccountSyncController({cloud:window.__accountCloud,storage:localStorage,readLocal:()=>dataRef.current,apply:data=>{dataRef.current=data;setClasses(data.classes);setTasks(data.tasks);setTheme(data.theme || "system");setColorTheme(data.colorTheme || "lilac");},onState:setState});
       controller.current=engine;
+      clearTimeout(startupTimer);
       unsubscribe=window.__accountAuth.subscribe(user=>engine.connect(user));
     };
     attach(); window.addEventListener("firebase-ready",attach);
     const resume=()=>{if(document.visibilityState==="visible")controller.current?.refresh();};
     const timer=setInterval(resume,30000);
     document.addEventListener("visibilitychange",resume); window.addEventListener("online",resume);
-    return()=>{disposed=true;unsubscribe?.();controller.current?.stop();controller.current=null;clearInterval(timer);window.removeEventListener("firebase-ready",attach);document.removeEventListener("visibilitychange",resume);window.removeEventListener("online",resume);};
+    return()=>{disposed=true;clearTimeout(startupTimer);unsubscribe?.();controller.current?.stop();controller.current=null;clearInterval(timer);window.removeEventListener("firebase-ready",attach);document.removeEventListener("visibilitychange",resume);window.removeEventListener("online",resume);};
   },[]);
-  useEffect(()=>{controller.current?.changed();},[classes,records]);
+  useEffect(()=>{controller.current?.changed();},[classes,records,theme,colorTheme]);
   const signIn=()=>{
     if(location.protocol==="file:"){setState(s=>({...s,error:"Google sign-in works on your published HTTPS website, not the local file preview."}));return;}
     if(!window.__accountAuth){setState(s=>({...s,error:"Google sign-in hasn't loaded. Check your connection and try again."}));return;}
@@ -1254,6 +1410,7 @@ function useGoogleAccount({classes,records,setClasses,setTasks}) {
 }
 
 function GoogleAccountPanel({account,onExport,onRecoverCode}) {
+  const installed = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const [code,setCode]=useState(""),[recovering,setRecovering]=useState(false),[recoveryMessage,setRecoveryMessage]=useState("");
   const labels={guest:"Saved on this device",loading:"Loading account…",saving:"Saving to your account…",saved:"Cloud is up to date",import:"Choose whether to add this device's data",error:"Changes are kept on this device"};
   return <section className="account-section" aria-label="Account and saving">
@@ -1268,7 +1425,8 @@ function GoogleAccountPanel({account,onExport,onRecoverCode}) {
         </div>}
         <div className="account-actions"><button type="button" className="account-secondary" disabled={account.loading||account.status==="saving"} onClick={account.retry}>Retry sync</button><button type="button" className="account-secondary" disabled={account.loading||account.status==="saving"} onClick={account.signOut}>Sign out</button></div>
       </> : <>
-        <p>Sign in to save your classes, tasks, and calendar to your Google account and use them on another device.</p>
+        <p>Sign in to save your classes, tasks, calendar, and appearance to your Google account and use them on another device.</p>
+        {installed && <p className="editor-hint">Sign in once inside this Home Screen app. Its sign-in is separate from Safari.</p>}
         <button type="button" className="google-sign-in" onClick={account.signIn}><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.2H24v8h11c-.5 2.6-1.9 4.8-4.1 6.3v5.2h6.7c3.9-3.6 6-8.9 6-15.3Z"/><path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.9l-6.7-5.2c-1.8 1.2-4.1 1.9-6.8 1.9-5.3 0-9.8-3.6-11.4-8.4H5.7v5.4A20.4 20.4 0 0 0 24 44Z"/><path fill="#FBBC05" d="M12.6 27.4a12.3 12.3 0 0 1 0-7.8v-5.4H5.7a20.1 20.1 0 0 0 0 18.6l6.9-5.4Z"/><path fill="#EA4335" d="M24 11.2c3 0 5.6 1 7.7 3l5.8-5.8A19.3 19.3 0 0 0 24 3 20.4 20.4 0 0 0 5.7 14.2l6.9 5.4A12 12 0 0 1 24 11.2Z"/></svg>Continue with Google</button>
         <p className="account-status">You can keep using the app without signing in. Guest data stays on this device.</p>
       </>}
@@ -1744,7 +1902,7 @@ function MiniCalendarPopover({ value, onSelect, onClose, anchorRect }) {
   return ReactDOM.createPortal(content, document.body);
 }
 
-function DatePickerButton({ value, onChange }) {
+function DatePickerButton({ value, onChange, compact = false }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef(null);
   const [anchorRect, setAnchorRect] = useState(null);
@@ -1757,7 +1915,7 @@ function DatePickerButton({ value, onChange }) {
   };
 
   return (
-    <div className="date-control" style={{ position: "relative", flexShrink: 0 }}>
+    <div className={`date-control ${compact ? "date-compact" : ""}`} style={{ position: "relative", flexShrink: 0 }}>
       <label className="native-date" style={{ background: "var(--bg)", border: "1px solid var(--border-strong)", borderRadius: "var(--radius-iphone)", padding: "0 8px", color: "var(--text-secondary)" }}>
         <Icon name="calendar" size={16} />
         <input type="date" aria-label="Due date" value={value || ""} onChange={e => onChange(e.target.value)} />
@@ -1765,6 +1923,8 @@ function DatePickerButton({ value, onChange }) {
       <button
         ref={btnRef}
         className="custom-date"
+        aria-label={compact ? `Change due date: ${formatDueLabel(value) || "Tomorrow"}` : undefined}
+        title={compact ? `Due ${formatDueLabel(value) || "Tomorrow"}` : undefined}
         type="button"
         onClick={handleToggle}
         style={{
@@ -1776,7 +1936,7 @@ function DatePickerButton({ value, onChange }) {
         }}
       >
         <Icon name="calendar" size={12} />
-        {formatDueLabel(value) || "Tomorrow"}
+        {!compact && (formatDueLabel(value) || "Tomorrow")}
       </button>
       {open && (
         <MiniCalendarPopover value={value} onSelect={onChange} onClose={() => setOpen(false)} anchorRect={anchorRect} />
@@ -2039,9 +2199,9 @@ function QuickAdd({ onAdd, placeholder, autoFocus, onCancel, withDate }) {
       onChange={e => setValue(e.target.value)}
       onKeyDown={e => { if (e.key === "Enter" && !e.nativeEvent.isComposing) submit(); if (e.key === "Escape") { setValue(""); onCancel?.(); } }}
       placeholder={placeholder || "What do you need to do?"} />
+    {withDate && <DatePickerButton compact value={dueDate} onChange={setDueDate} />}
     <button type="button" className="quick-add-submit" aria-label="Add task" disabled={!value.trim() || (withDate && (!validISO(dueDate) || (repeat !== "none" && repeatUntil && repeatUntil < dueDate)))} onClick={submit}><Icon name="check" size={17} /></button>
     {withDate && <TaskAddOptions isEvent={isEvent} onChange={setIsEvent}>
-      <DatePickerButton value={dueDate} onChange={setDueDate} />
       <EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} />
       <RepeatFields compact repeat={repeat} onRepeat={setRepeat} until={repeatUntil} onUntil={setRepeatUntil} startDate={dueDate} />
       {repeat !== "none" && repeatUntil && repeatUntil < dueDate && <p className="editor-error" role="alert">End date must be on or after the first event.</p>}
@@ -2503,71 +2663,7 @@ function AddItemSheet({ onAdd, onClose }) {
 
 /* ---------- due today warning banner ---------- */
 
-function DueTodayBanner({ tasks, classById, onOpenClass, onToggle }) {
-  const [expanded, setExpanded] = useState(false);
-  const count = tasks.length;
-
-  return (
-    <div style={{
-      marginTop: 20,
-      background: "#C15B5B14",
-      border: "1px solid #C15B5B33",
-      borderRadius: "var(--radius-card)",
-      overflow: "hidden",
-    }}>
-      <button
-        onClick={() => setExpanded(e => !e)}
-        style={{
-          display: "flex", alignItems: "center", gap: 10, width: "100%",
-          padding: "13px 16px", background: "transparent", border: "none", cursor: "pointer",
-          textAlign: "left",
-        }}
-      >
-        <Icon name="alertTriangle" size={18} style={{ color: "#C15B5B", flexShrink: 0 }} />
-        <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#A84848" }}>
-          {count} task{count === 1 ? "" : "s"} due today
-        </span>
-        <Icon name="chevron" size={16} style={{
-          color: "#C15B5B", flexShrink: 0,
-          transform: expanded ? "rotate(90deg)" : "none",
-          transition: "transform 0.18s ease",
-        }} />
-      </button>
-      <div style={{
-        maxHeight: expanded ? 400 : 0,
-        opacity: expanded ? 1 : 0,
-        transition: "max-height 0.22s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease",
-        overflow: "hidden",
-      }}>
-        <div style={{ padding: "0 12px 10px" }}>
-          {tasks.map(t => {
-            const cls = classById[t.classId];
-            return (
-              <div key={t.id} style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "8px 6px",
-              }}>
-                <TaskCheckbox checked={false} onToggle={() => onToggle(t.id)} color={cls ? cls.color : "#C15B5B"} />
-                <button
-                  onClick={() => cls && onOpenClass(cls.id)}
-                  style={{
-                    flex: 1, background: "none", border: "none", cursor: cls ? "pointer" : "default",
-                    textAlign: "left", padding: 0,
-                  }}
-                >
-                  <div style={{ fontSize: 14, color: "var(--text-primary)", fontWeight: 500 }}>{t.title}</div>
-                  {cls && <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 1 }}>{cls.name}</div>}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TodayFocus({ tasks }) {
+function TodayFocus({ tasks, eventCount = 0 }) {
   const today = todayISO();
   const due = tasks.filter(t => t.dueDate === today);
   const done = due.filter(t => t.done).length;
@@ -2584,6 +2680,7 @@ function TodayFocus({ tasks }) {
         <div className="focus-emblem" data-complete={due.length > 0 && !left} aria-hidden="true"><Icon name={due.length && !left ? "check" : "calendar"} size={23} /></div>
       </div>
       <p className="focus-copy">{overdue ? `${overdue} overdue ${overdue === 1 ? "task needs" : "tasks need"} a little attention.` : due.length ? (left ? "A little focus now. A lighter day ahead." : "Nice work. Enjoy a little breathing room.") : "Nothing due today. Plan ahead or take a breather."}</p>
+      <div className="focus-event-count"><Icon name="calendar" size={14} /><span>{eventCount} {eventCount === 1 ? "event" : "events"} today</span></div>
       {due.length > 0 && <>
         <div className="focus-track" role="progressbar" aria-label="Tasks due today completed" aria-valuemin={0} aria-valuemax={due.length} aria-valuenow={done}><div className="focus-fill" style={{ width: `${percent}%` }} /></div>
         <div className="focus-meta"><span>{done} of {due.length} complete</span><span>{percent}%</span></div>
@@ -2592,7 +2689,7 @@ function TodayFocus({ tasks }) {
   );
 }
 
-function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReorder, onToggleTask }) {
+function Dashboard({ classes, tasks, records = [], onOpenClass, onAddClass, onAddTask, onReorder, onToggleTask }) {
   const isMobile = useIsMobile();
   const [adding, setAdding] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
@@ -2634,25 +2731,13 @@ function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReord
     dragOverIdRef.current = null;
   };
 
-  const classById = useMemo(() => {
-    const m = {};
-    classes.forEach(c => { m[c.id] = c; });
-    return m;
-  }, [classes]);
-
-  const dueTodayTasks = useMemo(() => {
-    const today = todayISO();
-    return tasks.filter(t => !t.done && t.dueDate === today);
-  }, [tasks]);
+  const focusToday = todayISO();
+  const eventCount = useMemo(() => expandTasks(records, focusToday).filter(task => isCalendarOnly(task) && task.dueDate === focusToday && !task.deleted).length, [records, focusToday]);
 
   const streak = useMemo(() => computeStreak(tasks), [tasks]);
 
   return (
     <div className="screen" style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
-      {dueTodayTasks.length > 0 && (
-        <DueTodayBanner tasks={dueTodayTasks} classById={classById} onOpenClass={onOpenClass} onToggle={onToggleTask} />
-      )}
-
       <div style={{ padding: "28px 0 22px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>My classes</h1>
         {streak >= 2 && (
@@ -2668,7 +2753,7 @@ function Dashboard({ classes, tasks, onOpenClass, onAddClass, onAddTask, onReord
         )}
       </div>
 
-      {classes.length > 0 && <TodayFocus tasks={tasks} />}
+      {(classes.length > 0 || tasks.length > 0 || eventCount > 0) && <TodayFocus tasks={tasks} eventCount={eventCount} />}
       {classes.length === 0 && (
         <div style={{ textAlign: "center", padding: "56px 20px", color: "var(--text-muted)" }}>
           <div className="empty-orbit" aria-hidden="true"><Icon name="grid" size={28} /></div>
@@ -3223,7 +3308,7 @@ function CalendarScreen({ classes, records, onToggle, onEdit, onDateChange }) {
     {viewMode === "month" && <div className="calendar-month">
       <div className="month-labels">{["S","M","T","W","T","F","S"].map((label,i)=><span key={i}>{label}</span>)}</div>
       <div className="month-cells">{monthCells.map((iso,i)=>iso ? <div key={iso} className="month-cell" data-selected={iso===selectedDate} data-today={iso===today}>
-        <button className="month-date" aria-label={dateFromISO(iso).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})} aria-pressed={iso===selectedDate} onClick={()=>selectDate(iso)}>{dateFromISO(iso).getDate()}<span className="month-dots" aria-hidden="true">{(byDate[iso]||[]).slice(0,3).map(t=><i key={t.id} style={{background:t.done?"var(--text-muted)":classesById[t.classId]?.color||"var(--accent)"}} />)}</span></button>
+        <button className="month-date" aria-label={dateFromISO(iso).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})} aria-pressed={iso===selectedDate} onClick={()=>selectDate(iso)}><span className="month-day-number">{dateFromISO(iso).getDate()}</span><span className="month-dots" aria-hidden="true">{(byDate[iso]||[]).slice(0,3).map(t=><i key={t.id} style={{background:classesById[t.classId]?.color||"var(--accent)"}} />)}</span></button>
         <div className="month-inline-events">{(byDate[iso]||[]).slice(0,2).map(t=><CalendarEvent key={t.id} task={t} cls={classesById[t.classId]} onToggle={onToggle} onEdit={onEdit} compact />)}{(byDate[iso]||[]).length>2 && <button className="more-events" onClick={()=>selectDate(iso)}>+{byDate[iso].length-2} more</button>}</div>
       </div> : <div key={`empty-${i}`} />)}</div>
     </div>}
@@ -3244,7 +3329,7 @@ function ColorThemePicker({ value, onChange }) {
   return <section className="theme-section" aria-labelledby="color-theme-heading">
     <h2 id="color-theme-heading">Color theme</h2>
     <div className="theme-options" role="group" aria-label="Color theme">
-      {COLOR_THEMES.map(palette => <button type="button" className="theme-option" key={palette.key}
+      {COLOR_THEMES.map(palette => <button type="button" className="theme-option" data-color-theme={palette.key} key={palette.key}
         aria-label={`${palette.name} theme`} aria-pressed={value === palette.key} onClick={() => onChange(palette.key)}
         style={{ "--swatch-light-accent": palette.light[0], "--swatch-light-soft": palette.light[1], "--swatch-dark-accent": palette.dark[0], "--swatch-dark-soft": palette.dark[1] }}>
         <span className="theme-swatch" aria-hidden="true" />
@@ -3301,7 +3386,7 @@ function SettingsScreen({
         </div>
       </div>
 
-      <ColorThemePicker value={colorTheme} onChange={onColorThemeChange} />
+      <ColorThemePicker value={colorTheme} onChange={value => { onColorThemeChange(value); if (value === "white") onThemeChange("light"); if (value === "black") onThemeChange("dark"); }} />
 
       <GoogleAccountPanel account={account} onExport={onExport} onRecoverCode={onEnterSync} />
 
@@ -3344,76 +3429,78 @@ function NavBar({ tab, setTab }) {
     { key: "calendar", label: "Calendar", icon: "calendar" },
     { key: "settings", label: "Settings", icon: "settings" },
   ];
-  return (
-    <nav className="bottom-nav" aria-label="Main navigation" style={{
-      position: "sticky", bottom: 0, left: 0, right: 0,
-      display: "flex", justifyContent: "center",
-      padding: "0 20px calc(20px + env(safe-area-inset-bottom, 0px))", pointerEvents: "none",
-    }}>
-      <div className="nav-track" style={{
-        "--active-tab": Math.max(0, items.findIndex(item => item.key === tab)),
-        display: "flex", gap: 2,
-        background: "var(--surface-raised)",
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius-iphone)",
-        padding: 6,
-        boxShadow: "var(--shadow-lift)",
-        pointerEvents: "auto",
-        backdropFilter: "blur(20px)",
-      }}>
-        <div className="nav-pill" aria-hidden="true" />
-        {items.map(item => (
-          <button key={item.key} aria-label={item.label} aria-current={tab === item.key ? "page" : undefined} onClick={() => setTab(item.key)} style={{
-            display: "flex", alignItems: "center", gap: 7,
-            padding: "10px 16px", borderRadius: "var(--radius-iphone)", border: "none", cursor: "pointer",
-            background: tab === item.key ? "var(--text-primary)" : "transparent",
-            color: tab === item.key ? "var(--bg)" : "var(--text-secondary)",
-            fontSize: 13.5, fontWeight: 600,
-            transition: "all 0.18s cubic-bezier(0.4,0,0.2,1)",
-            position: "relative",
-          }}>
-            <Icon name={item.icon} size={17} />
-            <span>{item.label}</span>
-          </button>
-        ))}
+  const active = Math.max(0, items.findIndex(item => item.key === tab));
+  const [position, setPosition] = useState(null);
+  const gesture = useRef(null);
+  const suppressClick = useRef(false);
+  const trackRef = useRef(null);
+  const positionAt = clientX => {
+    const box = trackRef.current.getBoundingClientRect();
+    const cell = (box.width - 12) / items.length;
+    return Math.max(0, Math.min(items.length - 1, (clientX - box.left - 6) / cell - .5));
+  };
+  const endDrag = (event, cancelled = false) => {
+    const current = gesture.current;
+    if (!current || current.id !== event.pointerId) return;
+    gesture.current = null;
+    if (current.dragged) {
+      suppressClick.current = true;
+      if (!cancelled) setTab(items[Math.round(positionAt(event.clientX))].key);
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+      // A new pointer-down also clears this if the browser emits no click.
+      setTimeout(() => { suppressClick.current = false; }, 0);
+    }
+    setPosition(null);
+  };
+  return <nav className="bottom-nav" aria-label="Main navigation" style={{
+    position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 30,
+    display: "flex", justifyContent: "center",
+    padding: "0 20px calc(20px + env(safe-area-inset-bottom, 0px))", pointerEvents: "none",
+  }}>
+    <div ref={trackRef} className="nav-track" data-dragging={position !== null}
+      onPointerDown={event => {
+        if (!event.isPrimary || event.button !== 0) return;
+        suppressClick.current = false;
+        gesture.current = {id:event.pointerId,x:event.clientX,y:event.clientY,dragged:false};
+      }}
+      onPointerMove={event => {
+        const current = gesture.current;
+        if (!current || current.id !== event.pointerId) return;
+        if (!current.dragged) {
+          if (Math.abs(event.clientY-current.y) > Math.abs(event.clientX-current.x)+6) { gesture.current=null; return; }
+          if (Math.abs(event.clientX-current.x) < 5) return;
+          current.dragged=true;
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }
+        setPosition(positionAt(event.clientX));
+      }}
+      onPointerUp={event => endDrag(event)}
+      onPointerCancel={event => endDrag(event,true)}
+      onLostPointerCapture={event => { if (gesture.current?.id === event.pointerId) { gesture.current=null; setPosition(null); } }}
+      onClickCapture={event => {if(suppressClick.current){event.preventDefault();event.stopPropagation();}}}
+      style={{"--active-tab":position === null ? active : position,display:"flex",gap:0,background:"var(--surface-raised)",border:"1px solid var(--border)",borderRadius:"var(--radius-iphone)",padding:6,boxShadow:"var(--shadow-lift)",pointerEvents:"auto",backdropFilter:"blur(20px)"}}>
+      <div className="nav-pill" aria-hidden="true" />
+      {items.map((item,index) => <button type="button" key={item.key} aria-label={item.label} aria-current={tab===item.key ? "page" : undefined}
+        onClick={()=>setTab(item.key)} onKeyDown={event=>{
+          if(!["ArrowLeft","ArrowRight","Home","End"].includes(event.key))return;
+          event.preventDefault();
+          const next=event.key==="Home"?0:event.key==="End"?items.length-1:(index+(event.key==="ArrowRight"?1:-1)+items.length)%items.length;
+          setTab(items[next].key);trackRef.current.querySelectorAll("button")[next].focus();
+        }} style={{display:"flex",alignItems:"center",gap:7,padding:"10px 16px",borderRadius:"var(--radius-iphone)",border:0,cursor:"pointer",background:"transparent",color:"var(--text-secondary)",fontSize:13.5,fontWeight:600,position:"relative"}}>
+        <Icon name={item.icon} size={17}/><span>{item.label}</span>
+      </button>)}
+      <div className="nav-ink" aria-hidden="true">
+        {items.map(item => <span className="nav-ink-label" key={item.key}><Icon name={item.icon} size={17}/><span>{item.label}</span></span>)}
       </div>
-    </nav>
-  );
+    </div>
+  </nav>;
 }
 
 /* ---------- floating quick-add ---------- */
 
-/* ---------- undo toast ---------- */
+/* ---------- floating add / undo action ---------- */
 
-function UndoToast({ entry, onUndo, onDismiss }) {
-  const [shown, setShown] = useState(entry);
-  const [exiting, setExiting] = useState(false);
-  const exitTimer = useRef(null);
-  useEffect(() => {
-    clearTimeout(exitTimer.current);
-    if (entry) { setShown(entry); setExiting(false); return; }
-    if (!shown) return;
-    setExiting(true);
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    exitTimer.current = setTimeout(() => setShown(null), reduced ? 0 : 220);
-    return () => clearTimeout(exitTimer.current);
-  }, [entry]);
-  if (!shown) return null;
-  const hasIcon = shown.label === "Task completed";
-  return <div key={shown.id || shown.label} className="undo-toast" data-exiting={exiting} role="status" style={{
-    position: "fixed", right: 24, bottom: "max(96px, 11vh)", zIndex: 50,
-    transformOrigin: "right bottom", animation: "toastRise 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
-  }}>
-    <div className="undo-toast-content" data-has-icon={hasIcon}>
-      {hasIcon && <span className="toast-check" aria-hidden="true"><Icon name="check" size={18} /></span>}
-      <span className="undo-message">{shown.label}</span>
-      <button className="undo-action" onClick={onUndo} disabled={exiting || !entry}>Undo</button>
-      <button className="undo-close" onClick={onDismiss} disabled={exiting || !entry} aria-label="Dismiss"><Icon name="x" size={16} /></button>
-    </div>
-  </div>;
-}
-
-function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate }) {
+function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate, undoEntry = null, lastUndoEntry = undoEntry, onUndo }) {
   const [open, setOpen] = useState(false);
   useSheet(open, () => setOpen(false));
   const [title, setTitle] = useState("");
@@ -3426,14 +3513,28 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate }) {
   const [isEvent, setIsEvent] = useState(false);
   const [pressed, setPressed] = useState(false);
   const inputRef = useRef(null);
+  const pressAction = useRef(undefined);
+  const holdTimer = useRef(null);
+  const holdTriggered = useRef(false);
+  const holdOrigin = useRef(null);
+  const latestUndo = useRef(lastUndoEntry);
+  latestUndo.current = lastUndoEntry;
+  const cancelHold = () => { clearTimeout(holdTimer.current); holdTimer.current = null; };
+  useEffect(() => {
+    const pause = () => cancelHold();
+    window.addEventListener("blur", pause);
+    document.addEventListener("visibilitychange", pause);
+    return () => { cancelHold(); window.removeEventListener("blur", pause); document.removeEventListener("visibilitychange", pause); };
+  }, []);
 
   useEffect(() => {
     setClassId(activeClassId || "");
   }, [activeClassId]);
 
   useEffect(() => {
-    if (open && inputRef.current) setTimeout(() => inputRef.current.focus(), 60);
+    const focusTimer = open ? setTimeout(() => inputRef.current?.focus(), 60) : null;
     if (open) { setDueDate(defaultDueDate || tomorrowISO()); setRepeat("none"); setRepeatUntil(""); setTime(""); setNotify(false); setIsEvent(false); }
+    return () => clearTimeout(focusTimer);
   }, [open]);
 
   const submit = () => {
@@ -3471,23 +3572,25 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate }) {
             <div style={{ fontSize: 16, fontWeight: 600 }}>Add a task</div>
             <button aria-label="Close add event" onClick={() => setOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "var(--bg)", color: "var(--text-primary)", borderRadius: "var(--radius-iphone)", padding: 10 }}><Icon name="x" size={18} /></button>
           </div>
+          <div className="task-title-row">
           <input
             ref={inputRef}
             value={title}
             onChange={e => setTitle(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") submit(); if (e.key === "Escape") setOpen(false); }}
             aria-label="Event title" enterKeyHint="done"
-            placeholder={classId ? "Finish lab questions" : "Appointment, birthday, or plans"}
+            placeholder={isEvent ? "Appointment, birthday, or plans" : "Homework, test, or quiz"}
             style={{
               width: "100%", border: "1.5px solid var(--border-strong)", borderRadius: "var(--radius-control)",
               padding: "11px 13px", fontSize: 16, outline: "none", background: "var(--bg)",
               color: "var(--text-primary)", fontFamily: "inherit", marginBottom: 12,
             }}
           />
+            <DatePickerButton compact value={dueDate} onChange={setDueDate} />
+          </div>
           <TaskAddOptions isEvent={isEvent} onChange={setIsEvent}>
           <div className="sheet-fields" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <RoundedSelect label="Calendar category" value={classId} onChange={setClassId} options={[["", "General event (no class)"], ...classes.map(c => [c.id,c.name])]} style={{flex: 1, minWidth: 0}} />
-            <DatePickerButton value={dueDate} onChange={setDueDate} />
           </div>
           <EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} />
           <RepeatFields repeat={repeat} onRepeat={setRepeat} until={repeatUntil} onUntil={setRepeatUntil} startDate={dueDate} />
@@ -3505,28 +3608,59 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate }) {
         </div>
       )}
       {!open && <button
-        onClick={() => setOpen(o => !o)}
-        aria-label="Add event or task"
+        type="button"
+        onClick={event => {
+          if (holdTriggered.current) { holdTriggered.current = false; pressAction.current = undefined; return; }
+          const startedWith = pressAction.current;
+          pressAction.current = undefined;
+          // A pill that expires under a held finger must not become an Add tap.
+          if (event.detail > 0 && startedWith !== undefined) {
+            if (startedWith !== null) { if (undoEntry?.id === startedWith) onUndo?.(); return; }
+            if (undoEntry) return;
+          }
+          if (undoEntry) onUndo?.(); else setOpen(true);
+        }}
+        aria-label={undoEntry ? `Undo: ${undoEntry.label}` : "Add event or task"}
+        title={undoEntry ? `Undo: ${undoEntry.label}` : lastUndoEntry ? "Add event or task · Hold 2 seconds to undo" : "Add event or task"}
+        data-undo={!!undoEntry}
         className="no-press floating-add"
         style={{
           position: "fixed", right: 24, bottom: "max(96px, 11vh)",
-          width: 54, height: 54, borderRadius: "50%",
+          width: undoEntry ? 112 : 54, height: 54, borderRadius: 27,
           background: "var(--text-primary)", color: "var(--bg)",
           border: "none", boxShadow: "var(--shadow-lift)",
           display: "flex", alignItems: "center", justifyContent: "center",
           cursor: "pointer", zIndex: 42,
           transform: `${open ? "rotate(45deg)" : "rotate(0deg)"} scale(${pressed ? 0.9 : 1})`,
-          transition: "transform 0.15s cubic-bezier(0.4,0,0.2,1), box-shadow 0.15s ease",
+          transition: "width .26s cubic-bezier(.22,1,.36,1), transform .15s ease, box-shadow .15s ease",
         }}
-        onMouseDown={() => setPressed(true)}
-        onMouseUp={() => setPressed(false)}
-        onMouseLeave={() => setPressed(false)}
-        onTouchStart={() => setPressed(true)}
-        onTouchEnd={() => setPressed(false)}
-        onTouchCancel={() => setPressed(false)}
+        onPointerDown={event => {
+          if (!event.isPrimary || event.button !== 0) return;
+          cancelHold(); holdTriggered.current = false;
+          pressAction.current = undoEntry?.id || null;
+          holdOrigin.current = {x:event.clientX,y:event.clientY};
+          setPressed(true);
+          const id = latestUndo.current?.id;
+          if (id) holdTimer.current = setTimeout(() => {
+            if (document.visibilityState !== "visible" || latestUndo.current?.id !== id) return;
+            holdTriggered.current = true;
+            setPressed(false);
+            onUndo?.();
+          }, 2000);
+        }}
+        onPointerMove={event => {
+          const origin = holdOrigin.current;
+          if (origin && Math.hypot(event.clientX-origin.x,event.clientY-origin.y) > 12) { cancelHold(); setPressed(false); }
+        }}
+        onPointerUp={() => { cancelHold(); setPressed(false); }}
+        onPointerLeave={() => { cancelHold(); setPressed(false); }}
+        onPointerCancel={() => { cancelHold(); setPressed(false); pressAction.current = undefined; }}
+        onContextMenu={event => event.preventDefault()}
       >
-        <Icon name="plus" size={24} />
+        <span className="fab-plus" aria-hidden="true"><Icon name="plus" size={24} /></span>
+        <span className="fab-undo" aria-hidden="true">Undo</span>
       </button>}
+      <span className="sr-status" role="status">{undoEntry ? `${undoEntry.label}. Undo available.` : ""}</span>
     </>
   );
 }
@@ -3623,7 +3757,9 @@ function App() {
     recordsRef.current = next;
     setRecords(next);
   }, []);
-  const account = useGoogleAccount({classes,records,setClasses,setTasks});
+  const [theme, setTheme] = useState(initialState.theme || "system");
+  const [colorTheme, setColorTheme] = useState(() => COLOR_THEMES.some(p => p.key === initialState.colorTheme) ? initialState.colorTheme : "lilac");
+  const account = useGoogleAccount({classes,records,theme,colorTheme,setClasses,setTasks,setTheme,setColorTheme});
   const [currentDay, setCurrentDay] = useState(todayISO());
   useEffect(() => {
     const refresh = () => { setCurrentDay(todayISO()); setTasks(current => current); };
@@ -3647,8 +3783,7 @@ function App() {
   const [calendarDate, setCalendarDate] = useState(todayISO());
   const [burst, setBurst] = useState(null);
   useEffect(() => { if (!burst) return; const timer = setTimeout(() => setBurst(null), 1200); return () => clearTimeout(timer); }, [burst]);
-  const [theme, setTheme] = useState(initialState.theme || "system");
-  const [colorTheme, setColorTheme] = useState(() => COLOR_THEMES.some(p => p.key === initialState.colorTheme) ? initialState.colorTheme : "lilac");
+
   useEffect(() => { document.documentElement.dataset.palette = colorTheme; }, [colorTheme]);
   const [tab, setTab] = useState("classes");
   const [openClassId, setOpenClassId] = useState(null);
@@ -3688,25 +3823,23 @@ function App() {
   }, [setTasks]);
 
   const [undoStack, setUndoStack] = useState([]);
+  const [undoVisible, setUndoVisible] = useState(false);
   const undoTimerRef = useRef(null);
-  useEffect(() => { setUndoStack([]); clearTimeout(undoTimerRef.current); }, [account.user?.uid]);
+  useEffect(() => { setUndoStack([]); setUndoVisible(false); clearTimeout(undoTimerRef.current); }, [account.user?.uid]);
 
   useEffect(() => () => clearTimeout(undoTimerRef.current), []);
   const pushUndo = useCallback(entry => {
     setUndoStack([{ ...entry, id: uid(), owner: account.user?.uid || "guest" }]);
+    setUndoVisible(true);
     clearTimeout(undoTimerRef.current);
-    undoTimerRef.current = setTimeout(() => setUndoStack([]), 2500);
+    undoTimerRef.current = setTimeout(() => setUndoVisible(false), 3000);
   }, [account.user?.uid]);
-
-  const dismissUndo = useCallback(() => {
-    setUndoStack([]);
-    clearTimeout(undoTimerRef.current);
-  }, []);
 
   const undoLast = useCallback(() => {
     const entry = undoStack[0];
     if (entry && entry.owner === (account.user?.uid || "guest")) entry.restore();
     setUndoStack([]);
+    setUndoVisible(false);
     clearTimeout(undoTimerRef.current);
   }, [undoStack, account.user?.uid]);
 
@@ -3798,7 +3931,7 @@ function App() {
   }, [pushUndo]);
 
   const exportData = useCallback(() => {
-    const data = JSON.stringify({ classes, tasks: records }, null, 2);
+    const data = JSON.stringify({ classes, tasks: records, theme, colorTheme }, null, 2);
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -3806,7 +3939,7 @@ function App() {
     a.download = "classes-backup.json";
     a.click();
     URL.revokeObjectURL(url);
-  }, [classes, records]);
+  }, [classes, records, theme, colorTheme]);
 
   const openClass = classes.find(c => c.id === openClassId);
 
@@ -3826,7 +3959,7 @@ function App() {
       />
     );
   } else if (tab === "classes") {
-    content = <Dashboard classes={classes} tasks={tasks} onOpenClass={setOpenClassId} onAddClass={addClass} onAddTask={addTask} onReorder={reorderClasses} onToggleTask={toggleTask} />;
+    content = <Dashboard classes={classes} tasks={tasks} records={records} onOpenClass={setOpenClassId} onAddClass={addClass} onAddTask={addTask} onReorder={reorderClasses} onToggleTask={toggleTask} />;
   } else if (tab === "calendar") {
     content = <CalendarScreen classes={classes} records={records} onToggle={toggleTask} onEdit={setEditingTask} onDateChange={setCalendarDate} />;
   } else if (tab === "all") {
@@ -3844,10 +3977,9 @@ function App() {
     <div id="app-shell" style={{ display: "flex", flexDirection: "column" }}>
       <main key={`${account.user?.uid || "guest"}:${openClass ? `class-${openClass.id}` : tab}`} className="screen-stage" style={{ flex: 1 }}>{account.loading ? <div className="account-loading" role="status">Loading your account…</div> : content}</main>
       <NavBar tab={openClass ? "classes" : tab} setTab={(t) => { setOpenClassId(null); setTab(t); }} />
-      {!account.loading && <FloatingAdd key={account.user?.uid || "guest"} classes={classes} activeClassId={openClass ? openClass.id : null} onAdd={addTask} defaultDueDate={tab === "calendar" ? calendarDate : null} />}
-      <UndoToast key={account.user?.uid || "guest"} entry={undoStack[0]?.owner === (account.user?.uid || "guest") ? undoStack[0] : null} onUndo={undoLast} onDismiss={dismissUndo} />
+      {!account.loading && <FloatingAdd key={`add:${account.user?.uid || "guest"}`} classes={classes} activeClassId={openClass ? openClass.id : null} onAdd={addTask} defaultDueDate={tab === "calendar" ? calendarDate : null} undoEntry={undoVisible && undoStack[0]?.owner === (account.user?.uid || "guest") ? undoStack[0] : null} lastUndoEntry={undoStack[0]?.owner === (account.user?.uid || "guest") ? undoStack[0] : null} onUndo={undoLast} />}
       {!account.loading && editingTask && <EditTaskSheet task={editingTask} source={records.find(t => t.id === (editingTask.seriesId || editingTask.id)) || editingTask} classes={classes} onSave={editTask} onDelete={deleteTask} onDeleteSeries={deleteSeries} onClose={() => setEditingTask(null)} />}
-      {!account.loading && <ReminderCenter key={account.user?.uid || "guest"} records={records} />}
+      {!account.loading && <ReminderCenter key={`reminder:${account.user?.uid || "guest"}`} records={records} />}
       <Confetti burst={burst} />
     </div>
   );
