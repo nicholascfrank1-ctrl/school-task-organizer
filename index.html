@@ -812,6 +812,21 @@
   :root[data-palette="rainbow"] body { background-image:radial-gradient(ellipse 100vw 800px at 0% 0%,var(--rainbow-rose),transparent 100%),radial-gradient(ellipse 100vw 1000px at 100% 40%,var(--rainbow-blue),transparent 100%),radial-gradient(ellipse 110vw 900px at 20% 100%,var(--rainbow-mint),transparent 100%); }
   :root[data-palette="rainbow"] { --rainbow-rose:#F3DDEB; --rainbow-blue:#DEE8FA; --rainbow-mint:#DFF0E9; }
   :root[data-palette="rainbow"][data-theme="dark"] { --rainbow-rose:#382439; --rainbow-blue:#203447; --rainbow-mint:#213C35; }
+
+  /* Give the dock ownership of touch gestures, including touches on its buttons. */
+  .nav-track, .nav-track > button { touch-action:none; -webkit-touch-callout:none; }
+  /* No transparent native date field may overlap an adjacent submit button. */
+  .date-control > .date-trigger { display:flex !important; }
+  .date-control.date-compact { overflow:hidden; isolation:isolate; }
+  .date-control.date-compact > .date-trigger { width:44px; height:44px; min-width:44px; min-height:44px; }
+
+  .appearance-control { display:grid; width:100%; }
+  .appearance-control > button, .appearance-ink-label { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; padding:10px 6px; font-size:12.5px; font-weight:600; line-height:1.3; min-width:0; }
+  .appearance-control > button[aria-pressed] { color:var(--text-secondary); }
+  .appearance-control > button:active { transform:none !important; }
+  .appearance-control .segment-pill { background:#F2F1ED; box-shadow:0 1px 4px rgba(0,0,0,.09); }
+  .appearance-ink { position:absolute; inset:3px; z-index:2; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); color:#171715; pointer-events:none; clip-path:inset(0 calc((2 - var(--active-segment)) * 100% / 3) 0 calc(var(--active-segment) * 100% / 3) round var(--radius-iphone)); transition:clip-path .38s cubic-bezier(.22,1,.36,1); }
+  @media (prefers-reduced-motion:reduce) { .appearance-ink { transition:none; } }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
@@ -1830,8 +1845,8 @@ function MiniCalendarPopover({ value, onSelect, onClose, anchorRect }) {
 
   const weekdayLabels = ["S", "M", "T", "W", "T", "F", "S"];
 
-  const POP_WIDTH = 240;
-  const POP_HEIGHT_EST = 300;
+  const POP_WIDTH = typeof window === "undefined" ? 336 : Math.min(336, window.innerWidth - 32);
+  const POP_HEIGHT_EST = 380;
   let top = anchorRect ? anchorRect.bottom + 6 : 0;
   let left = anchorRect ? anchorRect.right - POP_WIDTH : 0;
   if (typeof window !== "undefined") {
@@ -1844,6 +1859,8 @@ function MiniCalendarPopover({ value, onSelect, onClose, anchorRect }) {
   const content = (
     <div
       ref={popRef}
+      role="dialog" aria-label="Choose due date"
+      onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); onClose(); } }}
       style={{
         position: "fixed", top, left, zIndex: 9999,
         background: "var(--surface-raised)", border: "1px solid var(--border)",
@@ -1853,14 +1870,14 @@ function MiniCalendarPopover({ value, onSelect, onClose, anchorRect }) {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <button type="button" onClick={() => goMonth(-1)} style={{
+        <button type="button" aria-label="Previous month" onClick={() => goMonth(-1)} style={{
           background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)",
           padding: 4, display: "flex", borderRadius: "var(--radius-iphone)",
         }}>
           <Icon name="chevron" size={14} style={{ transform: "rotate(180deg)" }} />
         </button>
         <div style={{ fontSize: 12.5, fontWeight: 600 }}>{monthLabel}</div>
-        <button type="button" onClick={() => goMonth(1)} style={{
+        <button type="button" aria-label="Next month" onClick={() => goMonth(1)} style={{
           background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)",
           padding: 4, display: "flex", borderRadius: "var(--radius-iphone)",
         }}>
@@ -1884,7 +1901,7 @@ function MiniCalendarPopover({ value, onSelect, onClose, anchorRect }) {
               key={i}
               onClick={() => { onSelect(iso); onClose(); }}
               style={{
-                aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
+                minWidth: 0, minHeight: 40, aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
                 borderRadius: "var(--radius-iphone)", border: "none", cursor: "pointer", fontSize: 11.5,
                 background: isSelected ? "var(--text-primary)" : (isToday ? "var(--bg)" : "transparent"),
                 color: isSelected ? "var(--bg)" : "var(--text-primary)",
@@ -1916,13 +1933,10 @@ function DatePickerButton({ value, onChange, compact = false }) {
 
   return (
     <div className={`date-control ${compact ? "date-compact" : ""}`} style={{ position: "relative", flexShrink: 0 }}>
-      <label className="native-date" style={{ background: "var(--bg)", border: "1px solid var(--border-strong)", borderRadius: "var(--radius-iphone)", padding: "0 8px", color: "var(--text-secondary)" }}>
-        <Icon name="calendar" size={16} />
-        <input type="date" aria-label="Due date" value={value || ""} onChange={e => onChange(e.target.value)} />
-      </label>
       <button
         ref={btnRef}
-        className="custom-date"
+        className="custom-date date-trigger"
+        aria-haspopup="dialog" aria-expanded={open}
         aria-label={compact ? `Change due date: ${formatDueLabel(value) || "Tomorrow"}` : undefined}
         title={compact ? `Due ${formatDueLabel(value) || "Tomorrow"}` : undefined}
         type="button"
@@ -3341,6 +3355,19 @@ function ColorThemePicker({ value, onChange }) {
   </section>;
 }
 
+function AppearanceControl({ value, onChange }) {
+  const options = [["light", "sun", "Light"], ["dark", "moon", "Dark"], ["system", "monitor", "System"]];
+  const content = (icon, label) => <><Icon name={icon} size={17}/><span>{label}</span></>;
+  return <div className="segmented-control appearance-control" role="group" aria-label="Appearance"
+    style={{"--segment-count":3,"--active-segment":Math.max(0,options.findIndex(([key])=>key===value))}}>
+    <span className="segment-pill" aria-hidden="true"/>
+    {options.map(([key,icon,label])=><button type="button" key={key} aria-pressed={key===value} onClick={()=>onChange(key)}>{content(icon,label)}</button>)}
+    <div className="appearance-ink" aria-hidden="true">
+      {options.map(([key,icon,label])=><span className="appearance-ink-label" key={key}>{content(icon,label)}</span>)}
+    </div>
+  </div>;
+}
+
 function SettingsScreen({
   theme, onThemeChange, colorTheme, onColorThemeChange, classes, tasks, onReorder, onExport,
   onEnterSync, account,
@@ -3368,22 +3395,7 @@ function SettingsScreen({
         <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>
           Appearance
         </div>
-        <div style={{ display: "flex", gap: 8, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", padding: 4 }}>
-          {[["light", "sun", "Light"], ["dark", "moon", "Dark"], ["system", "monitor", "System"]].map(([key, icon, label]) => (
-            <button key={key} onClick={() => onThemeChange(key)} style={{
-              flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
-              padding: "10px 6px", borderRadius: "var(--radius-iphone)", border: "none", cursor: "pointer",
-              background: theme === key ? "var(--bg)" : "transparent",
-              color: theme === key ? "var(--text-primary)" : "var(--text-secondary)",
-              fontWeight: theme === key ? 600 : 500, fontSize: 12.5,
-              boxShadow: theme === key ? "var(--shadow)" : "none",
-              transition: "all 0.15s ease",
-            }}>
-              <Icon name={icon} size={17} />
-              {label}
-            </button>
-          ))}
-        </div>
+        <AppearanceControl value={theme} onChange={onThemeChange} />
       </div>
 
       <ColorThemePicker value={colorTheme} onChange={value => { onColorThemeChange(value); if (value === "white") onThemeChange("light"); if (value === "black") onThemeChange("dark"); }} />
@@ -3443,12 +3455,14 @@ function NavBar({ tab, setTab }) {
     const current = gesture.current;
     if (!current || current.id !== event.pointerId) return;
     gesture.current = null;
+    // Capture may retarget touch-up away from the original button, so commit
+    // taps here too rather than depending on a subsequent button click.
+    if (!cancelled) setTab(items[Math.round(positionAt(event.clientX))].key);
+    suppressClick.current = true;
     if (current.dragged) {
-      suppressClick.current = true;
-      if (!cancelled) setTab(items[Math.round(positionAt(event.clientX))].key);
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-      // A new pointer-down also clears this if the browser emits no click.
-      setTimeout(() => { suppressClick.current = false; }, 0);
+      // Keep suppression until the compatibility click or the next new gesture.
+      // iOS can deliver that click after a zero-delay timer has already run.
     }
     setPosition(null);
   };
@@ -3462,6 +3476,8 @@ function NavBar({ tab, setTab }) {
         if (!event.isPrimary || event.button !== 0) return;
         suppressClick.current = false;
         gesture.current = {id:event.pointerId,x:event.clientX,y:event.clientY,dragged:false};
+        // Touch starts on a child button; transfer its implicit capture to the track.
+        event.currentTarget.setPointerCapture(event.pointerId);
       }}
       onPointerMove={event => {
         const current = gesture.current;
@@ -3476,8 +3492,8 @@ function NavBar({ tab, setTab }) {
       }}
       onPointerUp={event => endDrag(event)}
       onPointerCancel={event => endDrag(event,true)}
-      onLostPointerCapture={event => { if (gesture.current?.id === event.pointerId) { gesture.current=null; setPosition(null); } }}
-      onClickCapture={event => {if(suppressClick.current){event.preventDefault();event.stopPropagation();}}}
+      onLostPointerCapture={event => { if (event.target === event.currentTarget && gesture.current?.id === event.pointerId) { gesture.current=null; setPosition(null); } }}
+      onClickCapture={event => {if(suppressClick.current && event.detail !== 0){suppressClick.current=false;event.preventDefault();event.stopPropagation();}}}
       style={{"--active-tab":position === null ? active : position,display:"flex",gap:0,background:"var(--surface-raised)",border:"1px solid var(--border)",borderRadius:"var(--radius-iphone)",padding:6,boxShadow:"var(--shadow-lift)",pointerEvents:"auto",backdropFilter:"blur(20px)"}}>
       <div className="nav-pill" aria-hidden="true" />
       {items.map((item,index) => <button type="button" key={item.key} aria-label={item.label} aria-current={tab===item.key ? "page" : undefined}
