@@ -827,7 +827,39 @@
   .appearance-control .segment-pill { background:#F2F1ED; box-shadow:0 1px 4px rgba(0,0,0,.09); }
   .appearance-ink { position:absolute; inset:3px; z-index:2; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); color:#171715; pointer-events:none; clip-path:inset(0 calc((2 - var(--active-segment)) * 100% / 3) 0 calc(var(--active-segment) * 100% / 3) round var(--radius-iphone)); transition:clip-path .38s cubic-bezier(.22,1,.36,1); }
   @media (prefers-reduced-motion:reduce) { .appearance-ink { transition:none; } }
+
+  .event-delete-actions { display:grid; gap:4px; margin-top:10px; }
+  .event-delete-actions .delete-event { margin:0; }
+  .series-delete-confirm { border:1px solid var(--border); border-radius:20px; padding:12px; }
+  .series-delete-confirm p { font-size:13px; margin:0; }
+  .series-delete-confirm .account-secondary { width:100%; }
+  .task-options-content, .repeat-fields, .custom-repeat-panel { grid-template-columns: minmax(0,1fr); }
+  .time-picker-columns { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .rounded-select-menu button { overflow-wrap:anywhere; }
+  .rounded-select-menu button svg { flex-shrink:0; }
+  @media (max-width:639px), (max-width:956px) and (max-height:500px) {
+    .mobile-sheet.edit-sheet, .mobile-sheet.add-task-sheet {
+      bottom:calc(var(--keyboard-inset, 0px) + max(12px, env(safe-area-inset-bottom, 0px))) !important;
+      max-height:max(0px, calc(var(--visual-height,100dvh) - env(safe-area-inset-top,0px) - max(12px, env(safe-area-inset-bottom,0px)) - 12px)) !important;
+      padding:clamp(14px, 4vw, 24px) !important;
+      overflow-x:hidden;
+    }
+    .class-card-details { padding-inline:clamp(10px, 4vw, 16px); }
+    .class-card-actions { flex-wrap:wrap; gap:4px; }
+    .quick-add.has-date { padding:10px !important; column-gap:6px !important; }
+    .custom-repeat-panel, .time-picker-panel { min-width:0; padding:10px; border-radius:22px; }
+    .time-picker-columns { gap:4px; }
+    .time-wheel-frame { border-radius:18px; }
+    .field-label > input[type="date"] { min-width:0; max-width:100%; }
+    .field-label > input[type="date"]::-webkit-date-and-time-value { text-align:left; min-width:0; }
+  }
+  @media (max-width:375px) {
+    .repeat-weekdays > div { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .rounded-select summary { padding-inline:12px; gap:8px; }
+  }
 </style>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
@@ -836,7 +868,6 @@
   // Paste your Firebase config below (from the Firebase console: Project settings > your web app).
   // Leave firebaseConfig as null until you have it — sync will just be disabled until then.
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc, getDocFromServer, onSnapshot, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
   import { getAuth, onAuthStateChanged, setPersistence, indexedDBLocalPersistence, browserLocalPersistence, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
@@ -850,11 +881,11 @@
     measurementId: "G-6LNE4P2YGL"
   };
 
-  let app = null, db = null;
-  if (firebaseConfig) {
-    app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-  }
+  const app = initializeApp(firebaseConfig);
+  let firestore;
+  const loadFirestore = () => firestore ||= import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js")
+    .then(sdk => ({...sdk, db:sdk.getFirestore(app)}))
+    .catch(error => { firestore = null; throw error; });
 
   const auth = getAuth(app);
   // Restore an existing account before rendering guest mode. Prefer durable
@@ -866,6 +897,7 @@
     catch (error) { persistenceError = error; }
   }
   await auth.authStateReady();
+  if (auth.currentUser) loadFirestore().catch(() => {});
   window.__accountAuth = {
     subscribe: callback => onAuthStateChanged(auth, callback),
     signIn: () => {
@@ -876,11 +908,18 @@
   };
   window.__accountCloud = {
     async read(uid) {
+      const {db,doc,getDocFromServer} = await loadFirestore();
       const snap = await getDocFromServer(doc(db,"users",uid,"planner","main"));
       const data = snap.exists() ? snap.data() : null;
       return {exists:snap.exists(),data,revision:data?.revision || 0};
     },
+    async readLegacy(code) {
+      const {db,doc,getDoc} = await loadFirestore();
+      const snap = await getDoc(doc(db,"syncedData",code));
+      return snap.exists() ? snap.data() : null;
+    },
     async write(uid,data,revision) {
+      const {db,doc,runTransaction,serverTimestamp} = await loadFirestore();
       const ref = doc(db,"users",uid,"planner","main");
       return runTransaction(db, async transaction => {
         if (auth.currentUser?.uid !== uid) throw Object.assign(new Error("The account changed before saving. Your device copy was kept."),{code:"sync/account-changed"});
@@ -892,16 +931,6 @@
       });
     },
   };
-  window.__firebaseReady = !!db;
-  window.__firestoreDoc = doc;
-  window.__firestoreSetDoc = setDoc;
-  window.__firestoreGetDoc = getDoc;
-  window.__firestoreOnSnapshot = onSnapshot;
-  window.__firestoreDb = db;
-  // Let the React app (which loads separately via Babel) know Firebase is
-  // ready even if this module script finishes after React has already
-  // rendered once — without this, a slow connection could make the app
-  // permanently think sync is unavailable.
   window.dispatchEvent(new CustomEvent("firebase-ready"));
 </script>
 </head>
@@ -1193,33 +1222,9 @@ function generateSyncCode() {
   return `${a}-${b}-${n}`;
 }
 
-function isFirebaseReady() {
-  return typeof window !== "undefined" && window.__firebaseReady;
-}
-
-async function pushToCloud(code, data, stamp) {
-  if (!isFirebaseReady()) throw new Error("Sync isn't set up yet.");
-  const ref = window.__firestoreDoc(window.__firestoreDb, "syncedData", code);
-  await window.__firestoreSetDoc(ref, { ...data, updatedAt: stamp || Date.now() });
-}
-
 async function pullFromCloud(code) {
-  if (!isFirebaseReady()) throw new Error("Sync isn't set up yet.");
-  const ref = window.__firestoreDoc(window.__firestoreDb, "syncedData", code);
-  const snap = await window.__firestoreGetDoc(ref);
-  if (!snap.exists()) return null;
-  return snap.data();
-}
-
-// Subscribes to real-time updates for a sync code. Calls onData(data) every time
-// the cloud copy changes (from any device), including once immediately with the
-// current value. Returns an unsubscribe function.
-function subscribeToCloud(code, onData) {
-  if (!isFirebaseReady()) return () => {};
-  const ref = window.__firestoreDoc(window.__firestoreDb, "syncedData", code);
-  return window.__firestoreOnSnapshot(ref, (snap) => {
-    if (snap.exists()) onData(snap.data());
-  }, () => {});
+  if (!window.__accountCloud) throw new Error("Sync isn't ready yet.");
+  return window.__accountCloud.readLegacy(code);
 }
 
 function validPlannerData(data) {
@@ -1847,12 +1852,14 @@ function MiniCalendarPopover({ value, onSelect, onClose, anchorRect }) {
 
   const POP_WIDTH = typeof window === "undefined" ? 336 : Math.min(336, window.innerWidth - 32);
   const POP_HEIGHT_EST = 380;
+  const viewportTop = typeof window === "undefined" ? 0 : window.visualViewport?.offsetTop || 0;
+  const viewportHeight = typeof window === "undefined" ? 400 : window.visualViewport?.height || window.innerHeight;
   let top = anchorRect ? anchorRect.bottom + 6 : 0;
   let left = anchorRect ? anchorRect.right - POP_WIDTH : 0;
   if (typeof window !== "undefined") {
     left = Math.max(8, Math.min(left, window.innerWidth - POP_WIDTH - 8));
-    if (anchorRect && top + POP_HEIGHT_EST > window.innerHeight) {
-      top = Math.max(8, anchorRect.top - POP_HEIGHT_EST - 6);
+    if (anchorRect && top + POP_HEIGHT_EST > viewportTop + viewportHeight) {
+      top = Math.max(viewportTop + 8, anchorRect.top - POP_HEIGHT_EST - 6);
     }
   }
 
@@ -1865,7 +1872,7 @@ function MiniCalendarPopover({ value, onSelect, onClose, anchorRect }) {
         position: "fixed", top, left, zIndex: 9999,
         background: "var(--surface-raised)", border: "1px solid var(--border)",
         borderRadius: "var(--radius-iphone)", boxShadow: "var(--shadow-lift)", padding: 12,
-        width: POP_WIDTH,
+        width: POP_WIDTH, maxHeight: Math.min(POP_HEIGHT_EST, viewportHeight - 16), overflowY: "auto",
         animation: "popIn 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)",
       }}
     >
@@ -2197,14 +2204,13 @@ function QuickAdd({ onAdd, placeholder, autoFocus, onCancel, withDate }) {
   const [repeat, setRepeat] = useState("none");
   const [repeatUntil, setRepeatUntil] = useState("");
   const [time, setTime] = useState("");
-  const [notify, setNotify] = useState(false);
   const [isEvent, setIsEvent] = useState(false);
   const inputRef = useRef(null);
   useEffect(() => { if (autoFocus) inputRef.current?.focus(); }, [autoFocus]);
   const submit = () => {
     const trimmed = value.trim();
     if (!trimmed || (withDate && (!validISO(dueDate) || (repeat !== "none" && repeatUntil && repeatUntil < dueDate)))) return;
-    if (withDate) { onAdd(trimmed, dueDate || tomorrowISO(), { repeat, repeatUntil, time, notify: !!time && notify, isEvent }); setDueDate(tomorrowISO()); setRepeat("none"); setRepeatUntil(""); setTime(""); setNotify(false); setIsEvent(false); }
+    if (withDate) { onAdd(trimmed, dueDate || tomorrowISO(), { repeat, repeatUntil, time, isEvent }); setDueDate(tomorrowISO()); setRepeat("none"); setRepeatUntil(""); setTime(""); setIsEvent(false); }
     else onAdd(trimmed);
     setValue(""); inputRef.current?.focus();
   };
@@ -2216,7 +2222,7 @@ function QuickAdd({ onAdd, placeholder, autoFocus, onCancel, withDate }) {
     {withDate && <DatePickerButton compact value={dueDate} onChange={setDueDate} />}
     <button type="button" className="quick-add-submit" aria-label="Add task" disabled={!value.trim() || (withDate && (!validISO(dueDate) || (repeat !== "none" && repeatUntil && repeatUntil < dueDate)))} onClick={submit}><Icon name="check" size={17} /></button>
     {withDate && <TaskAddOptions isEvent={isEvent} onChange={setIsEvent}>
-      <EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} />
+      <EventTimeFields time={time} onTime={setTime} />
       <RepeatFields compact repeat={repeat} onRepeat={setRepeat} until={repeatUntil} onUntil={setRepeatUntil} startDate={dueDate} />
       {repeat !== "none" && repeatUntil && repeatUntil < dueDate && <p className="editor-error" role="alert">End date must be on or after the first event.</p>}
     </TaskAddOptions>}
@@ -2410,7 +2416,7 @@ function ColorPackPicker({ selectedColor, onSelect }) {
 
 }
 
-function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, onColorChange, onDeleteClass }) {
+function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, onColorChange, onDeleteClass, onEdit }) {
   const [showAdd, setShowAdd] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -2536,7 +2542,7 @@ function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, 
       {active.length > 0 && (
         <div className="task-surface">
           {active.map(t => (
-            <TaskRow key={t.id} task={t} color={cls.color} onToggle={onToggle} onDelete={onDelete} />
+            <TaskRow key={t.id} task={t} color={cls.color} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
           ))}
         </div>
       )}
@@ -2553,7 +2559,7 @@ function ClassScreen({ cls, tasks, onBack, onAdd, onToggle, onDelete, onRename, 
           {showCompleted && (
             <div className="task-surface" style={{ marginTop: 12, opacity: 0.75 }}>
               {completed.map(t => (
-                <TaskRow key={t.id} task={t} color={cls.color} onToggle={onToggle} onDelete={onDelete} />
+                <TaskRow key={t.id} task={t} color={cls.color} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
               ))}
             </div>
           )}
@@ -3088,48 +3094,14 @@ function TaskAddOptions({ isEvent, onChange, children }) {
   </div>;
 }
 
-function EventTimeFields({ time, onTime, notify, onNotify }) {
+function EventTimeFields({ time, onTime }) {
   return <div className="event-time-fields">
     <div className="field-label"><span>Time <span className="field-optional">(optional)</span></span>
       <EventTimePicker value={time} onChange={onTime} />
     </div>
-    {time && <button type="button" className="clear-event-time" onClick={() => { onTime(""); onNotify(false); }}>Make all-day</button>}
-    <label className="notify-toggle"><input type="checkbox" switch="" className="native-haptic-toggle" checked={!!time && notify} disabled={!time} onChange={e => onNotify(e.target.checked)} /><span>Remind me while the app is open</span></label>
-    <p className="editor-hint">{time ? "Reminders appear while this app is open. Background phone notifications aren't connected yet." : "Leave the time blank for an all-day event. Choose a time to enable an in-app reminder."}</p>
+    {time && <button type="button" className="clear-event-time" onClick={() => onTime("")}>Make all-day</button>}
+    {!time && <p className="editor-hint">Leave the time blank for an all-day event.</p>}
   </div>;
-}
-
-function ReminderCenter({ records }) {
-  const [reminder, setReminder] = useState(null);
-  const seen = useRef(null);
-  if (!seen.current) {
-    try { seen.current = new Set(JSON.parse(localStorage.getItem("classesApp.remindersShown.v1") || "[]")); }
-    catch { seen.current = new Set(); }
-  }
-  useEffect(() => {
-    const check = () => {
-      if (document.visibilityState !== "visible" || reminder) return;
-      const next = dueReminders(records, new Date()).find(task => !seen.current.has(reminderKey(task)));
-      if (!next) return;
-      seen.current.add(reminderKey(next));
-      try { localStorage.setItem("classesApp.remindersShown.v1", JSON.stringify([...seen.current].slice(-1000))); } catch {}
-      setReminder(next);
-    };
-    check();
-    const timer = setInterval(check, 15000);
-    document.addEventListener("visibilitychange", check);
-    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", check); };
-  }, [records, reminder]);
-  useEffect(() => {
-    if (!reminder) return;
-    const current = resolveTask(records, reminder.id);
-    if (!current || (current.done && !current.autoCompleted) || current.deleted || !current.notify || current.time !== reminder.time || current.dueDate !== reminder.dueDate) setReminder(null);
-  }, [records, reminder]);
-  if (!reminder) return null;
-  return <aside className="event-reminder" role="alert" aria-label="Event reminder">
-    <Icon name="calendar" size={22} /><div><span className="reminder-heading">Event reminder · {formatEventTime(reminder.time)}</span><strong>{reminder.title}</strong></div>
-    <button type="button" className="quiet-icon" aria-label="Dismiss reminder" onClick={() => setReminder(null)}><Icon name="x" size={18} /></button>
-  </aside>;
 }
 
 function RoundedSelect({ value, onChange, options, disabled = false, label = "Choose an option", style }) {
@@ -3224,7 +3196,7 @@ function CalendarEvent({ task, cls, onToggle, onEdit, onDelete, showDate = false
     <div className="event-copy">
       {(compact || dense) && validEventTime(task.time) && <span className="event-time">{formatEventTime(task.time)}</span>}
       {compact || dense ? <button className="event-title-button" onClick={() => onEdit(task)} aria-label={`Edit ${task.title}`}>{task.title}</button> : <div className="event-title">{task.title}</div>}
-      {!compact && <div className="event-meta">{cls ? cls.name : "General event"}{showDate && task.dueDate ? ` · ${formatDueLabel(task.dueDate)}` : ""}{validEventTime(task.time) ? ` · ${formatEventTime(task.time)}` : ""}{task.notify && validEventTime(task.time) ? " · Reminder" : ""}{task.repeat && task.repeat !== "none" ? ` · ${repeatLabel(task.repeat)}` : ""}{task.isEvent ? " · Event" : ""}{task.done ? task.autoCompleted ? " · Finished" : " · Completed" : ""}</div>}
+      {!compact && <div className="event-meta">{cls ? cls.name : "General event"}{showDate && task.dueDate ? ` · ${formatDueLabel(task.dueDate)}` : ""}{validEventTime(task.time) ? ` · ${formatEventTime(task.time)}` : ""}{task.repeat && task.repeat !== "none" ? ` · ${repeatLabel(task.repeat)}` : ""}{task.isEvent ? " · Event" : ""}{task.done ? task.autoCompleted ? " · Finished" : " · Completed" : ""}</div>}
     </div>
     {!compact && !dense && <button className="event-edit" data-event-action="true" aria-label={`Edit ${task.title}`} onClick={() => onEdit(task)}><Icon name="edit" size={17} /></button>}
   </article>;
@@ -3239,33 +3211,38 @@ function EditTaskSheet({ task, source, classes, onSave, onDelete, onDeleteSeries
   const [repeat, setRepeat] = useState(source.repeat || "none");
   const [until, setUntil] = useState(source.repeatUntil || "");
   const [time, setTime] = useState(task.time || "");
-  const [notify, setNotify] = useState(!!task.notify);
   const [isEvent, setIsEvent] = useState(!!task.isEvent);
-  const inputRef = useRef(null);
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  const [confirmSeriesDelete, setConfirmSeriesDelete] = useState(false);
   const changeScope = value => {
     setScope(value);
     const values = value === "series" ? source : task;
-    setTitle(values.title); setClassId(values.classId || ""); setDueDate(values.dueDate); setTime(values.time || ""); setNotify(!!values.notify); setIsEvent(!!values.isEvent);
+    setTitle(values.title); setClassId(values.classId || ""); setDueDate(values.dueDate); setTime(values.time || ""); setIsEvent(!!values.isEvent);
   };
   const invalidEnd = repeat !== "none" && scope === "series" && until && until < dueDate;
   const canSave = title.trim() && (!classId || classes.some(c => c.id === classId)) && validISO(dueDate) && !invalidEnd;
-  const submit = e => { e.preventDefault(); if (canSave) { onSave(task, { title: title.trim(), classId, dueDate, time, notify: !!time && notify, isEvent, repeat, repeatUntil: repeat === "none" ? "" : until }, scope); onClose(); } };
+  const submit = e => { e.preventDefault(); if (canSave) { onSave(task, { title: title.trim(), classId, dueDate, time, isEvent, repeat, repeatUntil: repeat === "none" ? "" : until }, scope); onClose(); } };
   return <>
     <div className="edit-backdrop" onClick={onClose} />
     <form className="mobile-sheet centered-sheet edit-sheet" role="dialog" aria-modal="true" aria-label="Edit event" onSubmit={submit}>
       <div className="editor-heading"><h2>Edit event</h2><button type="button" className="quiet-icon" onClick={onClose} aria-label="Close edit event"><Icon name="x" size={19} /></button></div>
       {task.seriesId && <div className="field-label">Apply changes to<RoundedSelect label="Apply changes to" value={scope} onChange={changeScope} options={[["occurrence","Only this occurrence"],["series","Entire series"]]} /></div>}
-      <label className="field-label">Title<input ref={inputRef} required maxLength={500} value={title} onChange={e => setTitle(e.target.value)} /></label>
+      <label className="field-label">Title<input required maxLength={500} value={title} onChange={e => setTitle(e.target.value)} /></label>
       <div className="field-label">Calendar category<RoundedSelect label="Calendar category" value={classId} onChange={setClassId} options={[["", "General event (no class)"], ...classes.map(c => [c.id,c.name])]} /></div>
       <label className="field-label">{task.seriesId && scope === "series" ? "Series starts" : "Date"}<input type="date" required value={dueDate} onChange={e => setDueDate(e.target.value)} /></label>
       <EventKindFields isEvent={isEvent} onChange={setIsEvent} />
-      <EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} />
+      <EventTimeFields time={time} onTime={setTime} />
       <RepeatFields repeat={repeat} onRepeat={setRepeat} until={until} onUntil={setUntil} startDate={dueDate} disabled={!!task.seriesId && scope === "occurrence"} />
       {task.seriesId && scope === "occurrence" && <p className="editor-hint">The rest of this series stays as scheduled. Choose “Entire series” to change the repeat schedule.</p>}
       {invalidEnd && <p role="alert" className="editor-error">The end date must be on or after the start date.</p>}
       <button className="primary-action" type="submit" disabled={!canSave}>Save changes</button>
-      <button type="button" className="delete-event" onClick={() => { if (task.seriesId && scope === "series") onDeleteSeries(task); else onDelete(task.id); onClose(); }}>{task.seriesId ? scope === "series" ? "Delete entire series" : "Delete this occurrence" : "Delete event"}</button>
+      <div className="event-delete-actions">
+        <button type="button" className="delete-event" onClick={() => { onDelete(task.id); onClose(); }}>{task.seriesId ? "Delete this occurrence" : "Delete event"}</button>
+        {task.seriesId && (confirmSeriesDelete ? <div className="series-delete-confirm">
+          <p role="status">Delete every occurrence of this event, past and future?</p>
+          <button type="button" className="delete-event" onClick={() => { onDeleteSeries(task); onClose(); }}>Yes, delete entire series</button>
+          <button type="button" className="account-secondary" onClick={() => setConfirmSeriesDelete(false)}>Cancel</button>
+        </div> : <button type="button" className="delete-event" onClick={() => setConfirmSeriesDelete(true)}>Delete entire series</button>)}
+      </div>
     </form>
   </>;
 }
@@ -3376,15 +3353,6 @@ function SettingsScreen({
   const totalDone = tasks.filter(t => t.done).length;
   const [enterMode, setEnterMode] = useState(false);
   const [codeInput, setCodeInput] = useState("");
-  const [firebaseReady, setFirebaseReady] = useState(isFirebaseReady());
-
-  useEffect(() => {
-    if (firebaseReady) return;
-    const handler = () => setFirebaseReady(isFirebaseReady());
-    window.addEventListener("firebase-ready", handler);
-    return () => window.removeEventListener("firebase-ready", handler);
-  }, [firebaseReady]);
-
   return (
     <div className="screen" style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px" }}>
       <div style={{ padding: "28px 0 22px" }}>
@@ -3525,7 +3493,6 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate, undoEntry 
   const [repeat, setRepeat] = useState("none");
   const [repeatUntil, setRepeatUntil] = useState("");
   const [time, setTime] = useState("");
-  const [notify, setNotify] = useState(false);
   const [isEvent, setIsEvent] = useState(false);
   const [pressed, setPressed] = useState(false);
   const inputRef = useRef(null);
@@ -3549,14 +3516,14 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate, undoEntry 
 
   useEffect(() => {
     const focusTimer = open ? setTimeout(() => inputRef.current?.focus(), 60) : null;
-    if (open) { setDueDate(defaultDueDate || tomorrowISO()); setRepeat("none"); setRepeatUntil(""); setTime(""); setNotify(false); setIsEvent(false); }
+    if (open) { setDueDate(defaultDueDate || tomorrowISO()); setRepeat("none"); setRepeatUntil(""); setTime(""); setIsEvent(false); }
     return () => clearTimeout(focusTimer);
   }, [open]);
 
   const submit = () => {
     const trimmed = title.trim();
     if (trimmed && (!classId || classes.some(c => c.id === classId)) && validISO(dueDate) && !(repeat !== "none" && repeatUntil && repeatUntil < dueDate)) {
-      onAdd(classId, trimmed, dueDate || tomorrowISO(), { repeat, repeatUntil, time, notify: !!time && notify, isEvent });
+      onAdd(classId, trimmed, dueDate || tomorrowISO(), { repeat, repeatUntil, time, isEvent });
       setTitle("");
       setOpen(false);
     }
@@ -3576,7 +3543,7 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate, undoEntry 
         />
       )}
       {open && (
-        <div className="mobile-sheet" role="dialog" aria-modal="true" aria-label="Add event or task" style={{
+        <div className="mobile-sheet add-task-sheet" role="dialog" aria-modal="true" aria-label="Add event or task" style={{
           position: "fixed", left: "50%", bottom: "max(100px, 12vh)",
           transform: "translateX(-50%)", width: "min(420px, calc(100vw - 40px))",
           background: "var(--surface-raised)", borderRadius: "var(--radius-iphone)",
@@ -3608,7 +3575,7 @@ function FloatingAdd({ classes, activeClassId, onAdd, defaultDueDate, undoEntry 
           <div className="sheet-fields" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <RoundedSelect label="Calendar category" value={classId} onChange={setClassId} options={[["", "General event (no class)"], ...classes.map(c => [c.id,c.name])]} style={{flex: 1, minWidth: 0}} />
           </div>
-          <EventTimeFields time={time} onTime={setTime} notify={notify} onNotify={setNotify} />
+          <EventTimeFields time={time} onTime={setTime} />
           <RepeatFields repeat={repeat} onRepeat={setRepeat} until={repeatUntil} onUntil={setRepeatUntil} startDate={dueDate} />
           {repeat !== "none" && repeatUntil && repeatUntil < dueDate && <p className="editor-error" role="alert">Choose an end date on or after the first event.</p>}
           </TaskAddOptions>
@@ -3972,6 +3939,7 @@ function App() {
         onRename={(name) => renameClass(openClass.id, name)}
         onColorChange={(color) => recolorClass(openClass.id, color)}
         onDeleteClass={() => deleteClass(openClass.id)}
+        onEdit={setEditingTask}
       />
     );
   } else if (tab === "classes") {
@@ -3995,7 +3963,6 @@ function App() {
       <NavBar tab={openClass ? "classes" : tab} setTab={(t) => { setOpenClassId(null); setTab(t); }} />
       {!account.loading && <FloatingAdd key={`add:${account.user?.uid || "guest"}`} classes={classes} activeClassId={openClass ? openClass.id : null} onAdd={addTask} defaultDueDate={tab === "calendar" ? calendarDate : null} undoEntry={undoVisible && undoStack[0]?.owner === (account.user?.uid || "guest") ? undoStack[0] : null} lastUndoEntry={undoStack[0]?.owner === (account.user?.uid || "guest") ? undoStack[0] : null} onUndo={undoLast} />}
       {!account.loading && editingTask && <EditTaskSheet task={editingTask} source={records.find(t => t.id === (editingTask.seriesId || editingTask.id)) || editingTask} classes={classes} onSave={editTask} onDelete={deleteTask} onDeleteSeries={deleteSeries} onClose={() => setEditingTask(null)} />}
-      {!account.loading && <ReminderCenter key={`reminder:${account.user?.uid || "guest"}`} records={records} />}
       <Confetti burst={burst} />
     </div>
   );
